@@ -4,26 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DAT Genie</title>
+
   <style>
     iframe {
       width: 100%;
-      border: none; /* Remove border */
+      height: auto; /* This makes the iframe responsive */
+      border: none; /* Optional: Remove iframe border */
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <iframe id="myIframe" src="https://script.google.com/macros/s/AKfycbw0z3uJwi-JvuiT5kTwxXbTnOM5f9SS_SnIsouLp67d3Y6C04ug1avzSIUJha1QNiXR8g/exec"></iframe>
-  </div>
-
-  <script>
-    function resizeIframe() {
-      const iframe = document.getElementById('myIframe');
-      iframe.style.height = window.innerHeight - 100 + 'px'; // Adjust the offset as needed
-    }
-
-    window.addEventListener('resize', resizeIframe);
-    window.addEventListener('load', resizeIframe);
-  </script>
+  <iframe src="https://script.google.com/macros/s/AKfycbycxseTZ6lqDQ27rjrahvWZBK3lCDSbbW0PogvYbzCR/dev" frameborder="0"></iframe>
 </body>
 </html>
