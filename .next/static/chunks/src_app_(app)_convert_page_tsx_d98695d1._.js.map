@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 7, "column": 0}, "map": {"version":3,"sources":["file:///home/user/studio/src/app/%28app%29/convert/page.tsx"],"sourcesContent":["\n'use client';\n\nimport React, { useEffect } from 'react';\nimport { useRefresh } from '@/hooks/use-refresh';\n\nconst ConvertContent = () => {\n  const { setRefreshFunction } = useRefresh();\n\n  useEffect(() => {\n    setRefreshFunction(null);\n  }, [setRefreshFunction]);\n\n  return <div className=\"p-4\">Convert Content</div>;\n}\n\n\nexport default function ConvertPage() {\n    return <ConvertContent />;\n}\n"],"names":[],"mappings":";;;;AAGA;AACA;;;AAHA;;;AAKA,MAAM,iBAAiB;;IACrB,MAAM,EAAE,kBAAkB,EAAE,GAAG,CAAA,GAAA,kIAAA,CAAA,aAAU,AAAD;IAExC,CAAA,GAAA,6JAAA,CAAA,YAAS,AAAD;oCAAE;YACR,mBAAmB;QACrB;mCAAG;QAAC;KAAmB;IAEvB,qBAAO,6LAAC;QAAI,WAAU;kBAAM;;;;;;AAC9B;GARM;;QAC2B,kIAAA,CAAA,aAAU;;;KADrC;AAWS,SAAS;IACpB,qBAAO,6LAAC;;;;;AACZ;MAFwB","debugId":null}}]
+}

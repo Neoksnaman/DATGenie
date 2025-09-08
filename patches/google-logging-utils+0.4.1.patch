@@ -1,0 +1,19 @@
+diff --git a/node_modules/google-logging-utils/build/src/logging-utils.js b/node_modules/google-logging-utils/build/src/logging-utils.js
+index 7831d10..1194285 100644
+--- a/node_modules/google-logging-utils/build/src/logging-utils.js
++++ b/node_modules/google-logging-utils/build/src/logging-utils.js
+@@ -17,7 +17,13 @@
+  * limitations under the License.
+  */
+ Object.defineProperty(exports, "__esModule", { value: true });
+-exports.getLogFormat = exports.getCloudTraceName = exports.getFunctionlog = exports.logger = exports.setLogThreshold = exports.setSilent = exports.setVerbose = exports.logThreshold = exports.logTime = exports.LogThreshold = void 0;
++exports.getLogFormat = exports.getCloudTraceName = exports.getFunctionlog = exports.logger = exports.setLogThreshold = exports.setSilent = exports.setVerbose = exports.logThreshold = exports.logTime = exports.LogThreshold = void 0;
++// process may not be available in all environments, so we need to check for it.
++let process = undefined;
++try {
++    process = require('node:process');
++}
++catch (e) { }
+ var LogThreshold;
+ (function (LogThreshold) {
+     LogThreshold[LogThreshold["DEBUG"] = 0] = "DEBUG";

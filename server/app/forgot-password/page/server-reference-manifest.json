@@ -1,0 +1,16 @@
+{
+  "node": {
+    "60fb327b88e41260b914a55950525e6a28b471e0a0": {
+      "workers": {
+        "app/forgot-password/page": {
+          "moduleId": "[project]/.next-internal/server/app/forgot-password/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/lib/actions/auth.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false
+        }
+      },
+      "layer": {
+        "app/forgot-password/page": "action-browser"
+      }
+    }
+  },
+  "edge": {}
+}
