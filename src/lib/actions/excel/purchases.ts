@@ -106,11 +106,16 @@ export async function generatePurchasesExcel(fileIds: string[], fileNames: strin
                 totalInputTax += inputTax;
                 totalGrossTaxablePurchase += grossTaxablePurchase;
 
+                const lastName = cols[4] || '';
+                const firstName = cols[5] || '';
+                const middleName = cols[6] || '';
+                const individualName = [lastName, firstName, middleName].some(name => name) ? `${lastName}, ${firstName} ${middleName}`.trim() : '';
+
                 const bodyRow = [
                     format(date, 'MM/dd/yyyy'),
                     formattedTin,
                     cols[3],
-                    `${cols[4]}, ${cols[5]} ${cols[6]}`,
+                    individualName,
                     `${cols[7]} ${cols[8]}`,
                     grossPurchase,
                     exemptPurchase,

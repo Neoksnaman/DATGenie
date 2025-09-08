@@ -107,7 +107,10 @@ export async function generate1601FQExcel(fileIds: string[], fileNames: string[]
                     const formattedTin = tin ? `${tin.substring(0,3)}-${tin.substring(3,6)}-${tin.substring(6,9)}-${branchCode}` : '';
                     row[1] = formattedTin;
                     row[2] = cols[4]; // Registered Name
-                    const individualName = (cols[5] || cols[6] || cols[7]) ? `${cols[5] || ''}, ${cols[6] || ''} ${cols[7] || ''}`.trim() : '';
+                    const lastName = cols[5] || '';
+                    const firstName = cols[6] || '';
+                    const middleName = cols[7] || '';
+                    const individualName = [lastName, firstName, middleName].some(name => name) ? `${lastName}, ${firstName} ${middleName}`.trim() : '';
                     row[3] = individualName;
                     row[4] = atc;
                     const atcData = atcWF.find(item => item.atc === atc);
@@ -209,7 +212,12 @@ export async function generate1601FQExcel(fileIds: string[], fileNames: string[]
                     const tin = cols[2];
                     const branchCode = cols[3];
                     const formattedTin = tin ? `${tin.substring(0,3)}-${tin.substring(3,6)}-${tin.substring(6,9)}-${branchCode}` : '';
-                    const employeeName = `${cols[4] || ''}, ${cols[5] || ''} ${cols[6] || ''}`.trim();
+                    
+                    const lastName = cols[4] || '';
+                    const firstName = cols[5] || '';
+                    const middleName = cols[6] || '';
+                    const employeeName = [lastName, firstName, middleName].some(name => name) ? `${lastName}, ${firstName} ${middleName}`.trim() : '';
+
                     const atc = cols[9];
                     const atcData = atcWF.find(item => item.atc === atc);
                     const nature = atcData ? atcData.description : 'NOT FOUND';
@@ -295,7 +303,10 @@ export async function generate1601FQExcel(fileIds: string[], fileNames: string[]
                     const formattedTin = tin ? `${tin.substring(0,3)}-${tin.substring(3,6)}-${tin.substring(6,9)}-${branchCode}` : '';
                     row[1] = formattedTin;
                     row[2] = cols[4]; // Registered Name
-                    const individualName = (cols[5] || cols[6] || cols[7]) ? `${cols[5] || ''}, ${cols[6] || ''} ${cols[7] || ''}`.trim() : '';
+                    const lastName = cols[5] || '';
+                    const firstName = cols[6] || '';
+                    const middleName = cols[7] || '';
+                    const individualName = [lastName, firstName, middleName].some(name => name) ? `${lastName}, ${firstName} ${middleName}`.trim() : '';
                     row[3] = individualName;
                     row[4] = atc;
                     row[5] = statusCode;

@@ -88,7 +88,7 @@ export async function generateSawtExcel(datFileContent: string, datFileName: str
             totalWithholdingTax += withholdingTax;
 
             const formattedTin = tin ? `${tin.substring(0,3)}-${tin.substring(3,6)}-${tin.substring(6,9)}-${branchCode}` : '';
-            const individualName = (lName || fName || mName) ? `${lName || ''}, ${fName || ''} ${mName || ''}`.trim() : '';
+            const individualName = [lName, fName, mName].some(name => name) ? `${lName || ''}, ${fName || ''} ${mName || ''}`.trim() : '';
             const atcData = combinedATC.find(item => item.atc === atc);
             const natureOfPayment = atcData ? atcData.description : 'NOT FOUND';
 

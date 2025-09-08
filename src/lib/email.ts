@@ -94,7 +94,7 @@ export async function sendVerificationEmail(to: string, name: string, link: stri
             <body>
                 <div class="container">
                     <div class="card">
-                        <img src="https://placehold.co/60x60/29ABE2/FFFFFF?text=LOGO" alt="DATGenie Logo" width="60" class="logo">
+                        <img src="https://dat-genie.vercel.app/logo.png" alt="DATGenie Logo" width="60" class="logo">
                         <h2>Hello ${name},</h2>
                         <p>Thank you for signing up for DATGenie! To complete your registration, please verify your email address by clicking the button below:</p>
                         <a href="${link}" class="button" style="color: #ffffff;">Verify</a>
@@ -192,7 +192,7 @@ export async function sendPasswordResetEmail(to: string, link: string) {
             <body>
                 <div class="container">
                     <div class="card">
-                        <img src="https://placehold.co/60x60/29ABE2/FFFFFF?text=LOGO" alt="DATGenie Logo" width="60" class="logo">
+                        <img src="https://dat-genie.vercel.app/logo.png" alt="DATGenie Logo" width="60" class="logo">
                         <h2>Password Reset Request</h2>
                         <p>We received a request to reset your password. If you did not make this request, you can ignore this email. Otherwise, you can reset your password using this link:</p>
                         <a href="${link}" class="button" style="color: #ffffff;">Reset Password</a>

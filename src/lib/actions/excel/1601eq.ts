@@ -103,7 +103,10 @@ export async function generate1601EQExcel(fileIds: string[], fileNames: string[]
                     const formattedTin = tin ? `${tin.substring(0,3)}-${tin.substring(3,6)}-${tin.substring(6,9)}-${cols[4]}` : '';
                     row[1] = formattedTin;
                     row[2] = cols[5];
-                    const individualName = (cols[6] || cols[7] || cols[8]) ? `${cols[6] || ''}, ${cols[7] || ''} ${cols[8] || ''}`.trim() : '';
+                    const lastName = cols[6] || '';
+                    const firstName = cols[7] || '';
+                    const middleName = cols[8] || '';
+                    const individualName = [lastName, firstName, middleName].some(name => name) ? `${lastName}, ${firstName} ${middleName}`.trim() : '';
                     row[3] = individualName;
                     row[4] = atc;
                     const atcData = atcWE.find(item => item.atc === atc);
@@ -204,7 +207,10 @@ export async function generate1601EQExcel(fileIds: string[], fileNames: string[]
                     const formattedTin = tin ? `${tin.substring(0,3)}-${tin.substring(3,6)}-${tin.substring(6,9)}-${cols[4]}` : '';
                     row[1] = formattedTin;
                     row[2] = cols[5];
-                    const individualName = (cols[6] || cols[7] || cols[8]) ? `${cols[6] || ''}, ${cols[7] || ''} ${cols[8] || ''}`.trim() : '';
+                    const lastName = cols[6] || '';
+                    const firstName = cols[7] || '';
+                    const middleName = cols[8] || '';
+                    const individualName = [lastName, firstName, middleName].some(name => name) ? `${lastName}, ${firstName} ${middleName}`.trim() : '';
                     row[3] = individualName;
                     row[4] = atc;
                     const atcData = atcExempt.find(item => item.atc === atc);
