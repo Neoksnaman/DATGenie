@@ -53,6 +53,7 @@ export async function generate1601FQDatFile(file: File, profile: TaxProfile, mon
             const tinResult = sanitizeAndValidateString(processedRow[0], 'TIN', 9, true, errorPrefix);
             if(tinResult.error) validationErrors.push(tinResult.error);
             processedRow[0] = tinResult.value.replace(/[^0-9]/g, '').substring(0, 9);
+            if (processedRow[0] === '000000000') validationErrors.push(`${errorPrefix}: Invalid TIN '000000000'.`);
             if (processedRow[0].length > 0 && processedRow[0].length < 9) validationErrors.push(`${errorPrefix}: TIN is too short. It must be 9 digits if provided.`);
             
             let branchCode = String(processedRow[1] || '').replace(/[^0-9]/g, '');
@@ -108,6 +109,7 @@ export async function generate1601FQDatFile(file: File, profile: TaxProfile, mon
             const tinResult = sanitizeAndValidateString(processedRow[0], 'TIN', 9, true, errorPrefix);
             if(tinResult.error) validationErrors.push(tinResult.error);
             processedRow[0] = tinResult.value.replace(/[^0-9]/g, '').substring(0, 9);
+            if (processedRow[0] === '000000000') validationErrors.push(`${errorPrefix}: Invalid TIN '000000000'.`);
             if (processedRow[0].length > 0 && processedRow[0].length < 9) validationErrors.push(`${errorPrefix}: TIN is too short. It must be 9 digits if provided.`);
             
             let branchCode = String(processedRow[1] || '').replace(/[^0-9]/g, '');
@@ -162,6 +164,7 @@ export async function generate1601FQDatFile(file: File, profile: TaxProfile, mon
             const tinResult = sanitizeAndValidateString(processedRow[0], 'TIN', 9, true, errorPrefix);
             if(tinResult.error) validationErrors.push(tinResult.error);
             processedRow[0] = tinResult.value.replace(/[^0-9]/g, '').substring(0, 9);
+            if (processedRow[0] === '000000000') validationErrors.push(`${errorPrefix}: Invalid TIN '000000000'.`);
             if (processedRow[0].length > 0 && processedRow[0].length < 9) validationErrors.push(`${errorPrefix}: TIN is too short. It must be 9 digits if provided.`);
             
             let branchCode = String(processedRow[1] || '').replace(/[^0-9]/g, '');
@@ -315,3 +318,5 @@ export async function generate1601FQDatFile(file: File, profile: TaxProfile, mon
         totalExemptIncomePayment: totalIncomePaymentSched3,
     };
 }
+
+    

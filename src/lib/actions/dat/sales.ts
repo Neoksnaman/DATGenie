@@ -31,6 +31,7 @@ export async function generateSalesDatFile(file: File, profile: TaxProfile, mont
         if (processedRow.length > 0 && String(processedRow[0]).trim()) {
             const originalTin = String(processedRow[0]);
             const sanitizedTin = originalTin.replace(/[^0-9]/g, '');
+            if (sanitizedTin.substring(0, 9) === '000000000') validationErrors.push(`${errorPrefix}: Invalid TIN '000000000'.`);
             if (sanitizedTin.substring(0, 9) === tin) validationErrors.push(`${errorPrefix}: The TIN matches the selected profile's TIN. A company cannot make a sale to itself.`);
             if (sanitizedTin.length < 9) validationErrors.push(`${errorPrefix}: TIN '${originalTin}' is too short. It must be at least 9 digits.`);
             processedRow[0] = sanitizedTin.substring(0, 9);
@@ -132,3 +133,5 @@ export async function generateSalesDatFile(file: File, profile: TaxProfile, mont
         processedData: null
     };
 }
+
+    

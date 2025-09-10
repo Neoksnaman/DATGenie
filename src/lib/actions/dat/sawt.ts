@@ -50,6 +50,7 @@ export async function validateAndProcessSAWT(formData: FormData, overwrite: bool
             if (String(processedRow[0] || '').trim()) {
                 const originalTin = String(processedRow[0]);
                 const sanitizedTin = originalTin.replace(/[^0-9]/g, '').substring(0, 9);
+                if (sanitizedTin === '000000000') validationErrors.push(`${errorPrefix}: Invalid TIN '000000000'.`);
                 if (sanitizedTin.length > 0 && sanitizedTin.length < 9) validationErrors.push(`${errorPrefix}: TIN '${originalTin}' is too short. It must be 9 digits if provided.`);
                 processedRow[0] = sanitizedTin;
             } else {
@@ -159,3 +160,5 @@ export async function validateAndProcessSAWT(formData: FormData, overwrite: bool
         totalWithholdingTax,
     };
 }
+
+    
