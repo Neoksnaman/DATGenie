@@ -528,7 +528,7 @@ export function HomeContent({
             <div className="block lg:hidden">
               <Card>
                   <CardHeader>
-                      <div className="flex flex-row items-center justify-between">
+                      <div className="flex items-center justify-between">
                           <div>
                             <CardTitle>Get Templates</CardTitle>
                             <CardDescription>Download the required Excel file before proceeding.</CardDescription>
@@ -569,7 +569,7 @@ export function HomeContent({
                     <div className="hidden lg:block">
                         <Card>
                             <CardHeader>
-                                <div className="flex flex-row items-center justify-between">
+                                <div className="flex items-center justify-between">
                                     <div>
                                         <CardTitle>Get Templates</CardTitle>
                                         <CardDescription>Download the required Excel file before proceeding.</CardDescription>
@@ -672,7 +672,7 @@ export function HomeContent({
           }}
           totalInputTax={purchaseTotals.totalInputTax}
           onContinue={handleNonCreditableContinue}
-          isCreating={isCreating}
+          isCreating={isCreatingDat}
         />
       )}
       <OverwriteDialog
