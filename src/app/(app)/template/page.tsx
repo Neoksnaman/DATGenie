@@ -42,7 +42,7 @@ const alphalistTemplate = {
 const withholdingTaxTemplate = {
   category: 'Withholding Tax Certificate',
   files: [
-    { name: 'BIR Form 2307', id: null },
+    { name: 'BIR Form 2307', id: '1PCJgkZ5GIvPNUNx7Vw0LPWj_lpdIK5gv' },
     { name: 'BIR Form 2306', id: null },
     { name: 'BIR Form 2316', id: null },
   ],

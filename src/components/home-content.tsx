@@ -12,6 +12,7 @@ import { Button } from './ui/button';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { convertExcelToDat, overwriteDatFile } from '@/lib/actions/dat/main';
 import { validateExcelForPurchases, createPurchasesDatFile } from '@/lib/actions/dat/purchases';
+import { generatePdf } from '@/lib/actions/pdf';
 import { useToast } from '@/hooks/use-toast';
 import { DatPreviewDialog } from './dat-preview-dialog';
 import type { DatPreviewState } from './dat-preview-dialog';
@@ -149,7 +150,7 @@ export function HomeContent({
   }, [selectedProfile, allFiles]);
 
 
-  const handleDatGeneration = async (file: File, month: string, year: string, type: string, schedule?: string) => {
+  const handleDatGeneration = async (file: File, args: any) => {
     if (!selectedProfile) {
         toast({ title: 'No Profile Selected', description: 'Please select a tax profile before generating a DAT file.', variant: 'destructive'});
         return;
@@ -165,19 +166,21 @@ export function HomeContent({
         return;
     }
     
+    const { month, year, reportType, sawtSchedule } = args;
+
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('reportType', type);
+    formData.append('reportType', reportType);
     formData.append('month', month);
     formData.append('year', year);
     formData.append('profile', JSON.stringify(profile));
     formData.append('folderId', user.folderId);
-     if (schedule) {
-        formData.append('schedule', schedule);
+     if (sawtSchedule) {
+        formData.append('schedule', sawtSchedule);
     }
     
-    if (type === "Summary Alphalist of Withholding Tax (SAWT)") {
-        if (!schedule) {
+    if (reportType === "Summary Alphalist of Withholding Tax (SAWT)") {
+        if (!sawtSchedule) {
             toast({ title: 'Schedule Missing', description: 'Please select a schedule for SAWT.', variant: 'destructive' });
             return;
         }
@@ -202,7 +205,7 @@ export function HomeContent({
              setOverwriteState({
                 isOpen: true,
                 fileName: result.fileName || 'Unknown',
-                transactionType: getSimpleTransactionType(type, schedule),
+                transactionType: getSimpleTransactionType(reportType, sawtSchedule),
                 reportingPeriod: reportingPeriod,
                 formData: formData,
             });
@@ -217,14 +220,14 @@ export function HomeContent({
     }
 
 
-    if (type === 'Summary of Purchases (SLP)') {
+    if (reportType === 'Summary of Purchases (SLP)') {
         const validationResult = await validateExcelForPurchases(formData);
         if (validationResult.success && validationResult.totalInputTax !== null && validationResult.processedData) {
             setPurchaseTotals({
                 totalInputTax: validationResult.totalInputTax,
                 processedData: validationResult.processedData,
             });
-            setCurrentGenerationArgs({ month, year, profile, folderId: user.folderId, reportType: type });
+            setCurrentGenerationArgs({ month, year, profile, folderId: user.folderId, reportType: reportType });
             setIsNonCreditableDialogOpen(true);
         } else if (!validationResult.success && validationResult.errors && validationResult.errors.length > 0) {
             setValidationErrors(validationResult.errors);
@@ -242,11 +245,11 @@ export function HomeContent({
     const result = await convertExcelToDat(formData);
 
     if (result.success && result.datContent !== null && result.fileName) {
-        if (type.includes('1601-FQ')) {
+        if (reportType.includes('1601-FQ')) {
              addOrUpdateFile();
         }
         
-        if (type === 'Summary of Sales (SLS)') {
+        if (reportType === 'Summary of Sales (SLS)') {
             addOrUpdateFile();
             setDatPreview({ 
                 fileName: result.fileName, 
@@ -259,7 +262,7 @@ export function HomeContent({
                     outputVat: result.totalOutputTax ?? 0,
                 }
             });
-        } else if (type === '1601-EQ (Schedule 1 and 2)') {
+        } else if (reportType === '1601-EQ (Schedule 1 and 2)') {
             addOrUpdateFile();
             setDatPreview({ 
                 fileName: result.fileName, 
@@ -271,7 +274,7 @@ export function HomeContent({
                     withholdingTax: result.totalWithholdingTax ?? 0,
                 }
             });
-        } else if (type === '1601-FQ (Schedule 1, 2, and 3)') {
+        } else if (reportType === '1601-FQ (Schedule 1, 2, and 3)') {
              setDatPreview({ 
                 fileName: result.fileName, 
                 content: result.datContent,
@@ -299,7 +302,7 @@ export function HomeContent({
         setOverwriteState({
             isOpen: true,
             fileName: result.fileName || 'Unknown',
-            transactionType: getSimpleTransactionType(type),
+            transactionType: getSimpleTransactionType(reportType),
             reportingPeriod: reportingPeriod,
             formData: formData,
         });
@@ -461,19 +464,70 @@ export function HomeContent({
     }
   }
 
-  const handleCertGeneration = (file: File, name: string, tin: string, position: string, signatureFile: File | null) => {
+  const handleCertGeneration = async (file: File, args: any) => {
+    const { certificateType, signatoryName, signatoryTIN, signatoryPosition, signatureFile, pdfSize, collate, signatureX, signatureY } = args;
+
     if (!selectedProfile) {
         toast({ title: 'No Profile Selected', description: 'Please select a tax profile before generating a certificate.', variant: 'destructive'});
         return;
     }
-    console.log('Generating Certificate for:', selectedProfile, 'with details:', {
-      file: file.name,
-      signatoryName: name,
-      signatoryTIN: tin,
-      signatoryPosition: position,
-      signatureFile: signatureFile?.name,
-    });
-    // Placeholder for Certificate generation logic
+    const profile = profiles.find(p => p.tpTIN === selectedProfile);
+    if (!profile) {
+        toast({ title: 'Profile not found', description: 'Please select a valid profile.', variant: 'destructive'});
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('certificateType', certificateType);
+    formData.append('signatoryName', signatoryName);
+    formData.append('signatoryTIN', signatoryTIN);
+    formData.append('signatoryPosition', signatoryPosition);
+    if (signatureFile) {
+        formData.append('signatureFile', signatureFile);
+    }
+    formData.append('profile', JSON.stringify(profile));
+    formData.append('pdfSize', pdfSize);
+    formData.append('collate', collate);
+    formData.append('signatureX', String(signatureX));
+    formData.append('signatureY', String(signatureY));
+
+
+    const result = await generatePdf(formData);
+    
+    if (result.success && result.base64) {
+        const byteCharacters = atob(result.base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = result.fileName || 'certificate.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        toast({
+            title: "Success",
+            description: "Your PDF certificate has been generated and downloaded.",
+        });
+
+    } else if (result.errors && result.errors.length > 0) {
+        setValidationErrors(result.errors);
+        setIsErrorsOpen(true);
+    } else {
+        toast({
+            title: "PDF Generation Failed",
+            description: result.error || "An unknown error occurred.",
+            variant: "destructive",
+        });
+    }
   };
 
   const showLoading = isPending || !initialFetchComplete;

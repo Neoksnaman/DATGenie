@@ -4,7 +4,7 @@
 import { useState, useCallback, type ChangeEvent, type DragEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UploadCloud, File as FileIcon, X, Loader2, AlertTriangle, FileUp, Upload } from 'lucide-react';
+import { UploadCloud, File as FileIcon, X, Loader2, AlertTriangle, FileUp, Upload, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from './ui/label';
@@ -17,7 +17,7 @@ interface GenerationCardProps {
   title: string;
   description: string;
   buttonText: string;
-  onGenerate: (file: File, ...args: any[]) => Promise<void>;
+  onGenerate: (file: File, args: any) => Promise<void>;
   icon: React.ReactNode;
   isDatGeneration: boolean;
   reminders?: string[];
@@ -63,6 +63,18 @@ const sawtSchedules = [
     "1701Q", "2550M", "2553"
 ];
 
+const certificateTypes = [
+    "Creditable Tax Withheld at Source (BIR Form 2307)",
+    "Final Tax Withheld at Source (BIR Form 2306)",
+    "Compensation Payment/Tax Withheld (BIR Form 2316)",
+];
+
+const disabledCertificateTypes = [
+    "Final Tax Withheld at Source (BIR Form 2306)",
+    "Compensation Payment/Tax Withheld (BIR Form 2316)",
+];
+
+
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: currentYear - 1999 }, (_, i) => (currentYear - i).toString());
 
@@ -79,10 +91,15 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
   const [sawtSchedule, setSawtSchedule] = useState(sawtSchedules[0]);
 
   // Cert Gen State
+  const [certificateType, setCertificateType] = useState(certificateTypes[0]);
   const [signatoryName, setSignatoryName] = useState('');
   const [signatoryTIN, setSignatoryTIN] = useState('');
   const [signatoryPosition, setSignatoryPosition] = useState('');
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [pdfSize, setPdfSize] = useState<'letter' | 'legal' | 'a4'>('legal');
+  const [collate, setCollate] = useState<'single' | 'multiple'>('single');
+  const [signatureX, setSignatureX] = useState(150);
+  const [signatureY, setSignatureY] = useState(190);
 
 
   const handleFileChange = (files: FileList | null) => {
@@ -108,14 +125,23 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
   const handleSignatureFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-        if (file.type.startsWith('image/')) {
-            setSignatureFile(file);
-        } else {
-            toast({
+        if (file.size > 1 * 1024 * 1024) {
+             toast({
+                title: 'Signature File Too Large',
+                description: 'Please upload a signature image that is 1MB or less.',
+                variant: 'destructive',
+            });
+            e.target.value = '';
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+             toast({
                 title: 'Invalid File Type',
                 description: 'Please upload a valid image file for the signature.',
                 variant: 'destructive',
             });
+        } else {
+            setSignatureFile(file);
         }
     }
     e.target.value = '';
@@ -146,14 +172,29 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
         toast({ title: 'No file selected', description: 'Please upload a file to generate.', variant: 'destructive'});
         return;
     };
+    
     setIsGenerating(true);
+
+    if (!isDatGeneration) {
+        if (signatureFile && signatureFile.size > 1 * 1024 * 1024) {
+            toast({
+                title: 'Signature File Too Large',
+                description: 'Please upload a signature image that is 1MB or less.',
+                variant: 'destructive',
+            });
+            setIsGenerating(false);
+            return;
+        }
+    }
     
     try {
+        let args = {};
         if (isDatGeneration) {
-            await onGenerate(selectedFile, month, year, reportType, sawtSchedule);
+            args = { month, year, reportType, sawtSchedule };
         } else {
-            await onGenerate(selectedFile, signatoryName, signatoryTIN, signatoryPosition, signatureFile);
+            args = { certificateType, signatoryName, signatoryTIN, signatoryPosition, signatureFile, pdfSize, collate, signatureX, signatureY };
         }
+        await onGenerate(selectedFile, args);
     } catch (error) {
          // Toast is handled by the calling component
     } finally {
@@ -163,6 +204,9 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
 
   const clearFile = () => {
     setSelectedFile(null);
+    if (!isDatGeneration) {
+        setSignatureFile(null);
+    }
   }
 
   return (
@@ -270,7 +314,7 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
                                 {!signatureFile ? (
                                     <>
                                         <Upload className="h-4 w-4" />
-                                        <span>Upload Signature</span>
+                                        <span>Upload Signature (1MB Max)</span>
                                     </>
                                 ) : (
                                     <div className="flex items-center gap-2 w-full">
@@ -294,6 +338,23 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
                             </label>
                         </div>
                     </div>
+                </div>
+                <div className="space-y-2">
+                    <Label>Certificate Type</Label>
+                    <Select value={certificateType} onValueChange={setCertificateType}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {certificateTypes.map(ct => {
+                                const isDisabled = disabledCertificateTypes.includes(ct);
+                                return (
+                                    <SelectItem key={ct} value={ct} disabled={isDisabled}>
+                                        {ct}
+                                        {isDisabled && <span className="text-muted-foreground/80"> (Under Development)</span>}
+                                    </SelectItem>
+                                );
+                            })}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
         )}
@@ -353,7 +414,7 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
           {buttonText}
         </Button>
         
-        {reminders && reminders.length > 0 && (
+        {isDatGeneration && reminders && reminders.length > 0 && (
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="reminders">
               <AccordionTrigger className="text-sm">
@@ -372,7 +433,66 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
             </AccordionItem>
           </Accordion>
         )}
+
+        {!isDatGeneration && (
+             <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="pdf-settings">
+                <AccordionTrigger className="text-sm">
+                    <div className="flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-primary" />
+                    PDF Settings
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-0">
+                    <div className="space-y-4 pt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label className="text-xs">Paper Size</Label>
+                                <Select value={pdfSize} onValueChange={(v) => setPdfSize(v as any)}>
+                                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="letter">Letter (8.5" x 11")</SelectItem>
+                                        <SelectItem value="legal">Legal (8.5" x 13")</SelectItem>
+                                        <SelectItem value="a4">A4 (8.27" x 11.69")</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs">PDF Output Mode</Label>
+                                <RadioGroup value={collate} onValueChange={(v) => setCollate(v as any)} className="space-y-2 pt-1">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="single" id="single" />
+                                        <Label htmlFor="single" className="font-normal text-sm">Single PDF (All rows in one file)</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="multiple" id="multiple" />
+                                        <Label htmlFor="multiple" className="font-normal text-sm">Multiple PDFs (One per row)</Label>
+                                    </div>
+                                </RadioGroup>
+                            </div>
+                        </div>
+                         <div className="space-y-2">
+                            <Label className="text-xs">Signature Position</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex items-center gap-2">
+                                    <Label htmlFor="sig-x" className="text-sm w-4">X</Label>
+                                    <Input id="sig-x" type="number" value={signatureX} onChange={(e) => setSignatureX(parseInt(e.target.value, 10))} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Label htmlFor="sig-y" className="text-sm w-4">Y</Label>
+                                    <Input id="sig-y" type="number" value={signatureY} onChange={(e) => setSignatureY(parseInt(e.target.value, 10))} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+        )}
       </CardContent>
     </Card>
   );
 }
+
+    
+
