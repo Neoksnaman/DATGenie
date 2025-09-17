@@ -1,8 +1,8 @@
 
 'use server';
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { readFile } from 'fs/promises';
+import path from 'path';
 import * as xlsx from 'xlsx';
 import { PDFDocument, PageSizes, type PDFImage } from 'pdf-lib';
 import type { TaxProfile } from '../../schemas';
@@ -273,16 +273,8 @@ export async function generate2307Pdf(formData: FormData): Promise<PdfResult> {
             return { success: false, errors: validationErrors };
         }
 
-        //const templatePath = path.join(process.cwd(), 'public', 'templates', 'form_2307_template.pdf');
-        //let pdfTemplateBytes = await fs.readFile(templatePath);
-		
-		// inside generate2307Pdf
-		const pdfUrl = `${process.env.NEXT_PUBLIC_APP_ORIGIN}/templates/form_2307_template.pdf`;
-
-		const res = await fetch(pdfUrl);
-		if (!res.ok) throw new Error(`Failed to load template: ${res.statusText}`);
-
-		const pdfTemplateBytes = new Uint8Array(await res.arrayBuffer());
+		const templatePath = path.join(process.cwd(), 'src', 'templates', 'form_2307_template.pdf');
+		const pdfTemplateBytes = await readFile(templatePath);
 
         if (signatureFile) {
             if (signatureFile.size > 1 * 1024 * 1024) { // 1MB limit
