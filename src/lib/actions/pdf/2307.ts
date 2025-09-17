@@ -273,11 +273,11 @@ export async function generate2307Pdf(formData: FormData): Promise<PdfResult> {
             return { success: false, errors: validationErrors };
         }
 
-        const templatePath = path.join(process.cwd(), 'templates', 'form_2307_template.pdf');
+        const templatePath = path.join(process.cwd(), 'public', 'templates', 'form_2307_template.pdf');
         let pdfTemplateBytes = await fs.readFile(templatePath);
 
         if (signatureFile) {
-             if (signatureFile.size > 1 * 1024 * 1024) { // 1MB limit
+            if (signatureFile.size > 1 * 1024 * 1024) { // 1MB limit
                 return { success: false, error: 'Signature image file size cannot exceed 1MB.' };
             }
 
