@@ -278,20 +278,15 @@ export async function generate2307Pdf(formData: FormData): Promise<PdfResult> {
         //let pdfTemplateBytes = await fs.readFile(templatePath);
 		
 		// inside generate2307Pdf
-		export async function getPdfTemplateBytes() {
-		  // Decide where we’re running
-		  const origin =
-			typeof window !== 'undefined'
-			  ? window.location.origin
-			  : `${process.env.NODE_ENV === 'production' ? 'https' : 'http'}://${headers().get('host')}`;
+		const host = headers().get('host');
+		const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+		
+		const pdfUrl = '/templates/form_2307_template.pdf';
 
-		  const res = await fetch(`${origin}/templates/form_2307_template.pdf`);
-		  if (!res.ok) throw new Error(`Failed to load template: ${res.statusText}`);
+		const res = await fetch(pdfUrl);
+		if (!res.ok) throw new Error(`Failed to load template: ${res.statusText}`);
 
-		  return new Uint8Array(await res.arrayBuffer());
-		}
-
-		const pdfTemplateBytes = await getPdfTemplateBytes();
+		const pdfTemplateBytes = new Uint8Array(await res.arrayBuffer());
 
         if (signatureFile) {
             if (signatureFile.size > 1 * 1024 * 1024) { // 1MB limit
