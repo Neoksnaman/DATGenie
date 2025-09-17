@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 7, "column": 0}, "map": {"version":3,"sources":["file:///home/user/studio/src/app/%28app%29/dat-files/page.tsx"],"sourcesContent":["\n'use client';\n\nimport React, { useEffect } from 'react';\nimport { useRefresh } from '@/hooks/use-refresh';\n\nconst DatFilesContent = () => {\n    const { setRefreshFunction } = useRefresh();\n\n    useEffect(() => {\n        setRefreshFunction(null);\n    }, [setRefreshFunction]);\n\n    return <div className=\"p-4\">DAT Files Content</div>;\n}\n\nexport default function DatFilesPage() {\n    return <DatFilesContent />;\n}\n"],"names":[],"mappings":";;;;AAGA;AACA;AAHA;;;;AAKA,MAAM,kBAAkB;IACpB,MAAM,EAAE,kBAAkB,EAAE,GAAG,CAAA,GAAA,+HAAA,CAAA,aAAU,AAAD;IAExC,CAAA,GAAA,qMAAA,CAAA,YAAS,AAAD,EAAE;QACN,mBAAmB;IACvB,GAAG;QAAC;KAAmB;IAEvB,qBAAO,8OAAC;QAAI,WAAU;kBAAM;;;;;;AAChC;AAEe,SAAS;IACpB,qBAAO,8OAAC;;;;;AACZ","debugId":null}}]
-}
