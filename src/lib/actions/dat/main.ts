@@ -4,7 +4,7 @@
 import type { TaxProfile } from '@/lib/schemas';
 import type { DatFileResult } from '@/lib/dat-utils';
 import { generateSalesDatFile } from './sales';
-import { validateExcelForPurchases, createPurchasesDatFile } from './purchases';
+import { validateExcelForPurchases, createPurchasesDatFile, generatePurchasesDatFile } from './purchases';
 import { generate1601EQDatFile } from './1601eq';
 import { generate1601FQDatFile } from './1601fq';
 import { validateAndProcessSAWT } from './sawt';

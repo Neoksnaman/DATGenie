@@ -1,8 +1,6 @@
 
 'use server';
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as xlsx from 'xlsx';
 import { headers } from 'next/headers';
 import { PDFDocument, PageSizes, type PDFImage } from 'pdf-lib';
@@ -253,10 +251,11 @@ export async function generate2307Pdf(formData: FormData): Promise<PdfResult> {
                 rowData['PayeeZipCode'] = zipCode;
             }
 
-            const atcCode = String(rowData['ATC'] || '').toUpperCase().trim();
+            const atcCode = String(rowData['ATC'] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
             if (!atcCode) {
                 validationErrors.push(`${errorPrefix}: ATC code is missing.`);
             } else {
+                rowData['ATC'] = atcCode;
                 const atcData = atcWE.find(item => item.atc === atcCode);
                 const excelRate = parseFloat(String(row[9]));
 
@@ -274,22 +273,18 @@ export async function generate2307Pdf(formData: FormData): Promise<PdfResult> {
             return { success: false, errors: validationErrors };
         }
 
-        //const templatePath = path.join(process.cwd(), 'public', 'templates', 'form_2307_template.pdf');
-        //let pdfTemplateBytes = await fs.readFile(templatePath);
+        const host = headers().get('host');
+        const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+        const pdfUrl = `${protocol}://${host}/templates/form_2307_template.pdf`;
+        const res = await fetch(pdfUrl);
+        if (!res.ok) {
+            throw new Error(`Failed to fetch PDF template from ${pdfUrl}. Status: ${res.status}`);
+        }
+        let pdfTemplateBytes: ArrayBuffer | Buffer = await res.arrayBuffer();
 		
-		// inside generate2307Pdf
-		const host = headers().get('host');
-		const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-		
-		const pdfUrl = '/templates/form_2307_template.pdf';
-
-		const res = await fetch(pdfUrl);
-		if (!res.ok) throw new Error(`Failed to load template: ${res.statusText}`);
-
-		const pdfTemplateBytes = new Uint8Array(await res.arrayBuffer());
 
         if (signatureFile) {
-            if (signatureFile.size > 1 * 1024 * 1024) { // 1MB limit
+             if (signatureFile.size > 1 * 1024 * 1024) { // 1MB limit
                 return { success: false, error: 'Signature image file size cannot exceed 1MB.' };
             }
 
@@ -338,7 +333,7 @@ export async function generate2307Pdf(formData: FormData): Promise<PdfResult> {
         const pdfDocs = await Promise.all(
             processedRows.map(rowData =>
                 fillPdfForm(
-                    pdfTemplateBytes,
+                    pdfTemplateBytes as Uint8Array,
                     rowData,
                     profile,
                     signatoryName,

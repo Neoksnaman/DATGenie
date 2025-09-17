@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { TaxProfile } from '@/lib/schemas';
@@ -21,7 +22,7 @@ export async function getUserHeaderData(databaseId: string): Promise<TaxProfileR
     return { success: true, data: headerData, error: null };
   } catch (error) {
     console.error('Error fetching header data:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+    const errorMessage = error instanceof Error ? e.message : 'An unknown error occurred.';
     return { success: false, data: null, error: `Failed to fetch header data: ${errorMessage}` };
   }
 }
@@ -29,17 +30,27 @@ export async function getUserHeaderData(databaseId: string): Promise<TaxProfileR
 
 type MutationResult = z.infer<typeof MutationResultSchema>;
 
-function transformToUppercase(data: TaxProfile): TaxProfile {
-  const uppercasedData: { [key: string]: any } = {};
+function sanitizeAndUppercase(data: TaxProfile): TaxProfile {
+  const sanitizedData: { [key: string]: any } = {};
+  const fieldsToSanitize = [
+    'companyName', 'lastName', 'firstName', 'middleName', 'tradeName',
+    'subStreet', 'street', 'barangay', 'cityMunicipality', 'province'
+  ];
+
   for (const key in data) {
     const value = data[key as keyof TaxProfile];
-    if (typeof value === 'string' && key !== 'entityType' && key !== 'cycleType' && key !== 'monthSelect' && key !== 'rdoCode') {
-      uppercasedData[key] = value.toUpperCase();
+    if (typeof value === 'string' && fieldsToSanitize.includes(key)) {
+      sanitizedData[key] = value
+        .trim() // Trim leading/trailing spaces first
+        .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters, keep spaces
+        .replace(/\s\s+/g, ' ') // Replace multiple internal spaces with a single one
+        .trim() // Trim again in case spaces were left at the ends
+        .toUpperCase();
     } else {
-      uppercasedData[key] = value;
+      sanitizedData[key] = value;
     }
   }
-  return uppercasedData as TaxProfile;
+  return sanitizedData as TaxProfile;
 }
 
 export async function addTaxProfile(profileData: TaxProfile, databaseId: string): Promise<MutationResult> {
@@ -57,9 +68,9 @@ export async function addTaxProfile(profileData: TaxProfile, databaseId: string)
         };
     }
 
-    const uppercasedData = transformToUppercase(validatedData);
-    await appendHeaderDataToSheet(uppercasedData, databaseId);
-    return { success: true, error: null, data: uppercasedData };
+    const sanitizedData = sanitizeAndUppercase(validatedData);
+    await appendHeaderDataToSheet(sanitizedData, databaseId);
+    return { success: true, error: null, data: sanitizedData };
   } catch (e) {
     console.error('Error adding tax profile:', e);
     const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -71,9 +82,9 @@ export async function addTaxProfile(profileData: TaxProfile, databaseId: string)
 export async function updateTaxProfile(profileData: TaxProfile, databaseId: string): Promise<MutationResult> {
   try {
     const validatedData = TaxProfileSchema.parse(profileData);
-    const uppercasedData = transformToUppercase(validatedData);
-    await updateHeaderDataInSheet(uppercasedData, databaseId);
-    return { success: true, error: null, data: uppercasedData };
+    const sanitizedData = sanitizeAndUppercase(validatedData);
+    await updateHeaderDataInSheet(sanitizedData, databaseId);
+    return { success: true, error: null, data: sanitizedData };
   } catch (e) {
     console.error('Error updating tax profile:', e);
     const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
