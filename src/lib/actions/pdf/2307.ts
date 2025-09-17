@@ -4,6 +4,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as xlsx from 'xlsx';
+import { headers } from 'next/headers';
 import { PDFDocument, PageSizes, type PDFImage } from 'pdf-lib';
 import type { TaxProfile } from '../../schemas';
 import { atcWE } from '../../schedules';
@@ -277,7 +278,10 @@ export async function generate2307Pdf(formData: FormData): Promise<PdfResult> {
         //let pdfTemplateBytes = await fs.readFile(templatePath);
 		
 		// inside generate2307Pdf
-		const pdfUrl = '/templates/form_2307_template.pdf';
+		const host = headers().get('host');
+		const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+		
+		const pdfUrl = `${protocol}://${host}/templates/form_2307_template.pdf`;
 
 		const res = await fetch(pdfUrl);
 		if (!res.ok) throw new Error(`Failed to load template: ${res.statusText}`);
