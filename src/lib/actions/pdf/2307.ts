@@ -1,6 +1,7 @@
 
 'use server';
 
+import pdfUrl from '@/templates/form_2307_template.pdf';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import * as xlsx from 'xlsx';
@@ -273,8 +274,8 @@ export async function generate2307Pdf(formData: FormData): Promise<PdfResult> {
             return { success: false, errors: validationErrors };
         }
 
-		const templatePath = path.join(process.cwd(), 'src', 'templates', 'form_2307_template.pdf');
-		const pdfTemplateBytes = await readFile(templatePath);
+		//const templatePath = path.join(process.cwd(), 'src', 'templates', 'form_2307_template.pdf');
+		const pdfTemplateBytes = await readFile(pdfUrl);
 
         if (signatureFile) {
             if (signatureFile.size > 1 * 1024 * 1024) { // 1MB limit
