@@ -277,7 +277,7 @@ export async function generate2307Pdf(formData: FormData): Promise<PdfResult> {
         //let pdfTemplateBytes = await fs.readFile(templatePath);
 		
 		// inside generate2307Pdf
-		const pdfUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/templates/form_2307_template.pdf`;
+		const pdfUrl = `${process.env.NEXT_PUBLIC_APP_ORIGIN}/templates/form_2307_template.pdf`;
 
 		const res = await fetch(pdfUrl);
 		if (!res.ok) throw new Error(`Failed to load template: ${res.statusText}`);
