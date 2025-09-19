@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback, type ChangeEvent, type DragEvent } from 'react';
+import { useState, useCallback, type ChangeEvent, type DragEvent, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UploadCloud, File as FileIcon, X, Loader2, AlertTriangle, FileUp, Upload, Settings } from 'lucide-react';
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Input } from './ui/input';
+import { Progress } from './ui/progress';
 
 interface GenerationCardProps {
   title: string;
@@ -70,7 +71,6 @@ const certificateTypes = [
 ];
 
 const disabledCertificateTypes = [
-    "Final Tax Withheld at Source (BIR Form 2306)",
     "Compensation Payment/Tax Withheld (BIR Form 2316)",
 ];
 
@@ -83,6 +83,8 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
+  
+  const [progress, setProgress] = useState(0);
 
   // DAT Gen State
   const [month, setMonth] = useState(months[0].value);
@@ -99,7 +101,36 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
   const [pdfSize, setPdfSize] = useState<'letter' | 'legal' | 'a4'>('legal');
   const [collate, setCollate] = useState<'single' | 'multiple'>('single');
   const [signatureX, setSignatureX] = useState(150);
-  const [signatureY, setSignatureY] = useState(190);
+  const [signatureY, setSignatureY] = useState(185);
+  
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isGenerating && !isDatGeneration) {
+      setProgress(0);
+      timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(timer);
+            return prev;
+          }
+          return prev + 5;
+        });
+      }, 300);
+    }
+    return () => {
+      clearInterval(timer);
+    };
+  }, [isGenerating, isDatGeneration]);
+
+  useEffect(() => {
+    if (certificateType === certificateTypes[0]) { // 2307
+      setSignatureX(150);
+      setSignatureY(185);
+    } else if (certificateType === certificateTypes[1]) { // 2306
+      setSignatureX(110);
+      setSignatureY(380);
+    }
+  }, [certificateType]);
 
 
   const handleFileChange = (files: FileList | null) => {
@@ -195,10 +226,19 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
             args = { certificateType, signatoryName, signatoryTIN, signatoryPosition, signatureFile, pdfSize, collate, signatureX, signatureY };
         }
         await onGenerate(selectedFile, args);
+        if(!isDatGeneration) {
+           setProgress(100);
+           setTimeout(() => setIsGenerating(false), 500); // Keep progress bar at 100% briefly
+        }
     } catch (error) {
          // Toast is handled by the calling component
+         if(!isDatGeneration) {
+            setIsGenerating(false);
+         }
     } finally {
-        setIsGenerating(false);
+        if(isDatGeneration) {
+            setIsGenerating(false);
+        }
     }
   }
 
@@ -409,10 +449,15 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
             </div>
         )}
 
-        <Button className="w-full" onClick={handleGenerateClick} disabled={isGenerating || !selectedFile}>
-          {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {buttonText}
-        </Button>
+        <div className="space-y-2">
+            <Button className="w-full" onClick={handleGenerateClick} disabled={isGenerating || !selectedFile}>
+              {isGenerating && isDatGeneration && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isGenerating && !isDatGeneration ? 'Generating PDFs...' : buttonText}
+            </Button>
+            {isGenerating && !isDatGeneration && (
+                <Progress value={progress} className="w-full h-2" />
+            )}
+        </div>
         
         {isDatGeneration && reminders && reminders.length > 0 && (
           <Accordion type="single" collapsible className="w-full">
@@ -493,6 +538,3 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
     </Card>
   );
 }
-
-    
-
