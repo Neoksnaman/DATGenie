@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { TaxProfile } from '@/lib/schemas';
 import { TaxProfilesContent } from '@/components/tax-profiles-content';
@@ -19,9 +19,25 @@ export default function TaxProfilesPage() {
     updateProfile 
   } = useTaxProfiles();
   const { setRefreshFunction } = useRefresh();
+  const wasPending = useRef(false);
+  const isManualRefresh = useRef(false);
 
-  const handleFetch = useCallback((isManualRefresh = false) => {
-    fetchProfiles(isManualRefresh);
+  useEffect(() => {
+    if (wasPending.current && !isPending && isManualRefresh.current) {
+        toast({
+            title: "Success",
+            description: "Data refreshed successfully.",
+        });
+        isManualRefresh.current = false;
+    }
+    wasPending.current = isPending;
+  }, [isPending, toast]);
+
+  const handleFetch = useCallback((manualRefresh = false) => {
+    if (manualRefresh) {
+        isManualRefresh.current = true;
+    }
+    fetchProfiles(manualRefresh);
   }, [fetchProfiles]);
 
   useEffect(() => {

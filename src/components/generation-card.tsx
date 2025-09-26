@@ -261,12 +261,18 @@ export function GenerationCard({
 
         if (success) {
             if (isDatGeneration) {
-                // Clear the file on successful DAT generation
                 setSelectedFile(null);
             } else {
                 setProgress(100);
-                setTimeout(() => setIsGenerating(false), 500); // Keep progress bar at 100% briefly
+                setTimeout(() => {
+                    setIsGenerating(false);
+                    setSelectedFile(null);
+                    setSignatureFile(null);
+                }, 500);
             }
+        } else {
+            // if generation fails, stop the generating state
+            setIsGenerating(false);
         }
     } catch (error) {
          // Toast is handled by the calling component

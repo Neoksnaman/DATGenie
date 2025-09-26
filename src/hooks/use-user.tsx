@@ -21,7 +21,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   const fetchUser = useCallback(async () => {
-    setIsLoading(true);
     try {
       const result = await getCurrentUser();
       if (result.success && result.data) {
@@ -43,21 +42,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, [router, pathname]);
 
   useEffect(() => {
-    // Only fetch user if not on a public-facing auth page
     const isAuthPage = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify'].some(p => pathname.startsWith(p));
-    
-    // We only want to run this on the initial load.
-    // If the user is already loaded, or we're on an auth page, we do nothing.
-    if (!user && !isAuthPage) {
+    if (!isAuthPage) {
         fetchUser();
     } else {
-        // If we are on an auth page, or user is already loaded, stop the loading indicator.
-        if (isLoading) {
-            setIsLoading(false);
-        }
+        setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]); // We depend on pathname to correctly handle auth vs. protected pages on initial load.
+  }, []);
 
   const updateUser = (newUser: UserDetails) => {
     setUser(newUser);

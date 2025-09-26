@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useTransition, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useTransition, useCallback, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,9 +52,26 @@ function DatFilesContent() {
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [yearFilter, setYearFilter] = useState<string>('all');
 
+    const wasPending = useRef(false);
+    const isManualRefresh = useRef(false);
 
-    const handleFetch = useCallback((isManualRefresh = false) => {
-        fetchFiles(isManualRefresh);
+    useEffect(() => {
+        if (wasPending.current && !isPending && isManualRefresh.current) {
+            toast({
+                title: "Success",
+                description: "Data refreshed successfully.",
+            });
+            isManualRefresh.current = false;
+        }
+        wasPending.current = isPending;
+    }, [isPending, toast]);
+
+
+    const handleFetch = useCallback((manualRefresh = false) => {
+        if (manualRefresh) {
+            isManualRefresh.current = true;
+        }
+        fetchFiles(manualRefresh);
     }, [fetchFiles]);
     
     useEffect(() => {
@@ -881,6 +898,3 @@ export default function DatFilesPage() {
     
 
     
-
-
-

@@ -30,8 +30,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 import { RefreshProvider, useRefresh } from '@/hooks/use-refresh';
-import { TaxProfileProvider } from '@/hooks/use-tax-profiles';
-import { DatFilesProvider } from '@/hooks/use-dat-files';
+import { TaxProfileProvider, useTaxProfiles } from '@/hooks/use-tax-profiles';
+import { DatFilesProvider, useDatFiles } from '@/hooks/use-dat-files';
 import { logoutUser } from '@/lib/actions/auth';
 import { LoadingPage } from '@/components/loading-page';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -92,17 +92,11 @@ function LayoutBody({ children }: { children: React.ReactNode }) {
     const [isLoggingOut, startLogoutTransition] = useTransition();
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
     const { refresh } = useRefresh();
-    const { toast } = useToast();
     
     const handleRefresh = () => {
       if (refresh) {
         startTransition(() => {
           refresh(true);
-        });
-      } else {
-        toast({
-            title: 'No action to refresh',
-            description: 'This page does not have a refresh action.',
         });
       }
     };
@@ -188,9 +182,13 @@ function AppLayoutContent({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoading } = useUser();
+  const { user, isLoading: isUserLoading } = useUser();
+  const { isPending: isProfilesPending, initialFetchComplete: profilesFetchComplete } = useTaxProfiles();
+  const { isPending: isFilesPending, initialFetchComplete: filesFetchComplete } = useDatFiles();
 
-  if (isLoading) {
+  const isAppLoading = isUserLoading || !profilesFetchComplete || !filesFetchComplete;
+
+  if (isAppLoading) {
     return <LoadingPage />;
   }
 

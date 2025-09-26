@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { TaxProfile } from '@/lib/schemas';
 import { HomeContent } from '@/components/home-content';
@@ -22,13 +22,31 @@ export default function HomePage() {
     selectedProfile,
     setSelectedProfile
   } = useTaxProfiles();
-  const { fetchFiles } = useDatFiles();
+  const { fetchFiles, isPending: isDatFilesPending } = useDatFiles();
   const { setRefreshFunction } = useRefresh();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  
+  const wasPending = useRef(false);
+  const isManualRefresh = useRef(false);
 
-  const handleFetch = useCallback((isManualRefresh = false) => {
-    fetchProfiles(isManualRefresh);
-    fetchFiles(isManualRefresh);
+  useEffect(() => {
+    const isCurrentlyPending = isPending || isDatFilesPending;
+    if (wasPending.current && !isCurrentlyPending && isManualRefresh.current) {
+        toast({
+            title: "Success",
+            description: "Data refreshed successfully.",
+        });
+        isManualRefresh.current = false; // Reset after showing toast
+    }
+    wasPending.current = isCurrentlyPending;
+  }, [isPending, isDatFilesPending, toast]);
+
+  const handleFetch = useCallback((manualRefresh = false) => {
+    if (manualRefresh) {
+      isManualRefresh.current = true;
+    }
+    fetchProfiles(manualRefresh);
+    fetchFiles(manualRefresh);
   }, [fetchProfiles, fetchFiles]);
 
   useEffect(() => {

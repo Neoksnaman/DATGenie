@@ -37,13 +37,6 @@ export const TaxProfileProvider = ({ children }: { children: ReactNode }) => {
         if (!initialFetchComplete) setInitialFetchComplete(true);
         return;
     }
-    
-    if (isManualRefresh) {
-        toast({
-          title: 'Refreshing Data...',
-          description: 'Fetching the latest profiles and files.',
-        });
-    }
 
     startTransition(async () => {
       const result = await getUserHeaderData(user.databaseId!);
