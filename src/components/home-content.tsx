@@ -2,11 +2,11 @@
 'use client';
 
 import Link from 'next/link';
-import type { TaxProfile } from '@/lib/schemas';
+import type { DatFile, TaxProfile } from '@/lib/schemas';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileSelector } from '@/components/profile-selector';
-import { GenerationCard } from '@/components/generation-card';
-import { FileUp, FileText, Download, Loader2, Users, BarChart, Clock, File as FileIcon, PlusCircle } from 'lucide-react';
+import { GenerationCard, reportTypes } from '@/components/generation-card';
+import { FileUp, FileText, Download, Loader2, Users, BarChart, Clock, File as FileIcon, PlusCircle, ChevronDown, Eye } from 'lucide-react';
 import { TaxProfilesSkeleton } from './tax-profiles-skeleton';
 import { Button } from './ui/button';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -16,7 +16,7 @@ import { generatePdf } from '@/lib/actions/pdf';
 import { useToast } from '@/hooks/use-toast';
 import { DatPreviewDialog } from './dat-preview-dialog';
 import type { DatPreviewState } from './dat-preview-dialog';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import { ErrorSummaryDialog } from './error-summary-dialog';
 import { NonCreditableTaxDialog } from './non-creditable-tax-dialog';
 import { OverwriteDialog } from './overwrite-dialog';
@@ -24,6 +24,13 @@ import { useDatFiles } from '@/hooks/use-dat-files';
 import { useUser } from '@/hooks/use-user';
 import { MonthlyChart } from './monthly-chart';
 import { format } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { getDatFileContent } from '@/lib/actions/drive';
 
 interface HomeContentProps {
   profiles: TaxProfile[];
@@ -65,7 +72,7 @@ export function HomeContent({
 }: HomeContentProps) {
   const { toast } = useToast();
   const { user } = useUser();
-  const { files: allFiles, addOrUpdateFile } = useDatFiles();
+  const { files: allFiles, addOrUpdateFile, removeFile } = useDatFiles();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [datPreview, setDatPreview] = useState<DatPreviewState>({ 
     fileName: '', 
@@ -89,34 +96,128 @@ export function HomeContent({
     processedData: undefined,
     nonCreditableTax: undefined,
   });
+  const [isViewing, startViewingTransition] = useTransition();
+  const [viewingFileId, setViewingFileId] = useState<string | null>(null);
+
+    const parseFileName = (fileName: string) => {
+        const tinLength = 9;
+        const branchCodeLength = 4;
+        const tinAndBranchLength = tinLength + branchCodeLength;
+        const sawtSchedules = ["1700", "1702", "2550Q", "1701", "1702Q", "2551M", "1701Q", "2550M", "2553"];
+
+        const tin = fileName.substring(0, tinLength);
+
+        if (fileName.includes('1601EQ')) {
+            const monthIndex = tinAndBranchLength;
+            const yearIndex = monthIndex + 2;
+            const month = fileName.substring(monthIndex, yearIndex);
+            const year = fileName.substring(yearIndex, yearIndex + 4);
+            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+            return { transactionType: '1601-EQ', reportingPeriod, year, month, tin };
+        }
+        
+        if (fileName.includes('1601FQ')) {
+            const monthIndex = tinAndBranchLength;
+            const yearIndex = monthIndex + 2;
+            const month = fileName.substring(monthIndex, yearIndex);
+            const year = fileName.substring(yearIndex, yearIndex + 4);
+            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+            return { transactionType: '1601-FQ', reportingPeriod, year, month, tin };
+        }
+        
+        if (fileName.includes('1604F')) {
+            const dateStartIndex = tinAndBranchLength;
+            const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
+            const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
+            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
+            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
+            return { transactionType: '1604-F', reportingPeriod, year, month, tin };
+        }
+
+        if (fileName.includes('1604E')) {
+            const dateStartIndex = tinAndBranchLength;
+            const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
+            const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
+            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
+            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
+            return { transactionType: '1604-E', reportingPeriod, year, month, tin };
+        }
+
+        const sortedSawtSchedules = sawtSchedules.sort((a, b) => b.length - a.length);
+        const sawtScheduleMatch = sortedSawtSchedules.find(schedule => fileName.includes(schedule));
+
+        if (sawtScheduleMatch) {
+            const monthIndex = tinAndBranchLength;
+            const yearIndex = monthIndex + 2;
+            const month = fileName.substring(monthIndex, yearIndex);
+            const year = fileName.substring(yearIndex, yearIndex + 4);
+            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+            return { transactionType: `SAWT-${sawtScheduleMatch}`, reportingPeriod, year, month, tin };
+        }
+        
+        const typeCode = fileName.charAt(9);
+        const month = fileName.substring(10, 12);
+        const year = fileName.substring(12, 16);
+
+        let transactionType = 'Unknown';
+        switch (typeCode) {
+            case 'S': transactionType = 'Sales'; break;
+            case 'P': transactionType = 'Purchases'; break;
+            case 'I': transactionType = 'Importations'; break;
+        }
+
+        const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+
+        return { transactionType, reportingPeriod, year, month, tin };
+    };
 
   const getSimpleTransactionType = (type: string, schedule?: string) => {
       if (type.includes('Sales')) return 'Sales';
       if (type.includes('Purchases')) return 'Purchases';
+      if (type.includes('Importations')) return 'Importations';
       if (type.includes('1601-EQ')) return '1601-EQ';
       if (type.includes('1601-FQ')) return '1601-FQ';
+      if (type.includes('1604-E')) return '1604-E';
+      if (type.includes('1604-F')) return '1604-F';
       if (type.includes('SAWT')) return `SAWT-${schedule}`;
       return type;
   }
   
-  const analytics = useMemo(() => {
+    const analytics = useMemo(() => {
     const filesToAnalyze = selectedProfile 
       ? allFiles.filter(file => file.name.startsWith(selectedProfile)) 
       : allFiles;
       
     const sortedFiles = [...filesToAnalyze].sort((a, b) => new Date(b.modifiedTime).getTime() - new Date(a.modifiedTime).getTime());
-
+    
+    const sawtSchedules = ["1700", "1702", "2550Q", "1701", "1702Q", "2551M", "1701Q", "2550M", "2553"];
+    
     const typeCounts = filesToAnalyze.reduce((acc, file) => {
         let simpleType = 'Other';
-        if (file.name.includes('S')) simpleType = 'Sales';
-        else if (file.name.includes('P')) simpleType = 'Purchases';
-        else if (file.name.includes('SAWT')) simpleType = 'SAWT';
-        else if (file.name.includes('1601EQ')) simpleType = '1601-EQ';
-        else if (file.name.includes('1601FQ')) simpleType = '1601-FQ';
+        const name = file.name;
+
+        if (sawtSchedules.some(schedule => name.includes(schedule))) {
+            simpleType = 'SAWT';
+        } else if (name.includes('1604F')) {
+            simpleType = '1604-F';
+        } else if (name.includes('1604E')) {
+            simpleType = '1604-E';
+        } else if (name.includes('1601EQ')) {
+            simpleType = '1601-EQ';
+        } else if (name.includes('1601FQ')) {
+            simpleType = '1601-FQ';
+        } else if (name.charAt(9) === 'S') {
+            simpleType = 'Sales';
+        } else if (name.charAt(9) === 'P') {
+            simpleType = 'Purchases';
+        } else if (name.charAt(9) === 'I') {
+            simpleType = 'Importations';
+        }
         
         acc[simpleType] = (acc[simpleType] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
+
 
     const monthlyData = filesToAnalyze.reduce((acc, file) => {
         const month = format(new Date(file.modifiedTime), 'MMM');
@@ -150,20 +251,156 @@ export function HomeContent({
   }, [selectedProfile, allFiles]);
 
 
-  const handleDatGeneration = async (file: File, args: any) => {
+    const handleViewFile = (file: DatFile) => {
+        setViewingFileId(file.id);
+        startViewingTransition(async () => {
+            try {
+                const result = await getDatFileContent(file.id);
+                if (result.success && result.content) {
+                    const lines = result.content.split('\n');
+                    const { transactionType } = parseFileName(file.name);
+                    let reportType: DatPreviewState['reportType'] = 'none';
+                    let totals: DatPreviewState['totals'] = {};
+    
+                    if (transactionType.includes('1601-EQ')) {
+                        reportType = '1601eq';
+                        const footer1 = lines.find(line => line.startsWith('C1,'));
+                        const footer2 = lines.find(line => line.startsWith('C2,'));
+                        if (footer1) {
+                            const cols = footer1.split(',');
+                            totals.taxableIncome = parseFloat(cols[5] || '0');
+                            totals.withholdingTax = parseFloat(cols[6] || '0');
+                        }
+                        if (footer2) {
+                             const cols = footer2.split(',');
+                            totals.exemptIncome = parseFloat(cols[5] || '0');
+                        }
+                    } else if (transactionType.includes('1601-FQ')) {
+                        reportType = '1601fq';
+                        const footer1 = lines.find(line => line.startsWith('C1,'));
+                        const footer2 = lines.find(line => line.startsWith('C2,'));
+                        const footer3 = lines.find(line => line.startsWith('C3,'));
+                         if (footer1) {
+                            const cols = footer1.split(',');
+                            totals.withholdingTax = parseFloat(cols[6] || '0');
+                        }
+                         if (footer2) {
+                            const cols = footer2.split(',');
+                            totals.services = parseFloat(cols[7] || '0');
+                        }
+                         if (footer3) {
+                            const cols = footer3.split(',');
+                            totals.exemptIncome = parseFloat(cols[5] || '0');
+                        }
+                    } else if (transactionType.includes('1604-E')) {
+                        reportType = '1604e';
+                        const footer3 = lines.find(line => line.startsWith('C3,'));
+                        const footer4 = lines.find(line => line.startsWith('C4,'));
+                        if (footer3) {
+                            const cols = footer3.split(',');
+                            totals.withholdingTax = parseFloat(cols[5] || '0');
+                        }
+                        if (footer4) {
+                             const cols = footer4.split(',');
+                            totals.exemptIncome = parseFloat(cols[5] || '0');
+                        }
+                    } else if (transactionType.includes('1604-F')) {
+                        reportType = '1604f';
+                        const footer4 = lines.find(line => line.startsWith('C4,'));
+                        const footer5 = lines.find(line => line.startsWith('C5,'));
+                        const footer6 = lines.find(line => line.startsWith('C6,'));
+                         if (footer4) {
+                            const cols = footer4.split(',');
+                            totals.withholdingTax = parseFloat(cols[6] || '0');
+                        }
+                         if (footer5) {
+                            const cols = footer5.split(',');
+                            totals.services = parseFloat(cols[7] || '0');
+                        }
+                         if (footer6) {
+                            const cols = footer6.split(',');
+                            totals.exemptIncome = parseFloat(cols[5] || '0');
+                        }
+                    } else if (transactionType.startsWith('SAWT')) {
+                        reportType = 'sawt';
+                        const footer = lines.find(line => line.startsWith('CSAWT,'));
+                        if (footer) {
+                            const cols = footer.split(',');
+                            totals.taxableIncome = parseFloat(cols[5] || '0');
+                            totals.withholdingTax = parseFloat(cols[6] || '0');
+                        }
+                    } else if (transactionType === 'Sales') {
+                        reportType = 'sales';
+                        const detailLines = lines.filter(line => line.startsWith('D,'));
+                        totals = detailLines.reduce((acc, line) => {
+                            const columns = line.split(',');
+                            acc.exempt = (acc.exempt ?? 0) + parseFloat(columns[9] || '0');
+                            acc.zeroRated = (acc.zeroRated ?? 0) + parseFloat(columns[10] || '0');
+                            acc.vatable = (acc.vatable ?? 0) + parseFloat(columns[11] || '0');
+                            acc.outputVat = (acc.outputVat ?? 0) + parseFloat(columns[12] || '0');
+                            return acc;
+                        }, { exempt: 0, zeroRated: 0, vatable: 0, outputVat: 0 });
+                    } else if (transactionType === 'Purchases') {
+                        reportType = 'purchases';
+                        const detailLines = lines.filter(line => line.startsWith('D,'));
+                        totals = detailLines.reduce((acc, line) => {
+                            const columns = line.split(',');
+                            acc.exempt = (acc.exempt ?? 0) + parseFloat(columns[9] || '0');
+                            acc.zeroRated = (acc.zeroRated ?? 0) + parseFloat(columns[10] || '0');
+                            acc.services = (acc.services ?? 0) + parseFloat(columns[11] || '0');
+                            acc.capitalGoods = (acc.capitalGoods ?? 0) + parseFloat(columns[12] || '0');
+                            acc.otherGoods = (acc.otherGoods ?? 0) + parseFloat(columns[13] || '0');
+                            acc.inputTax = (acc.inputTax ?? 0) + parseFloat(columns[14] || '0');
+                            return acc;
+                        }, { exempt: 0, zeroRated: 0, services: 0, capitalGoods: 0, otherGoods: 0, inputTax: 0 });
+                    } else if (transactionType === 'Importations') {
+                        reportType = 'importations';
+                        const detailLines = lines.filter(line => line.startsWith('D,'));
+                        totals = detailLines.reduce((acc, line) => {
+                            const columns = line.split(',');
+                            acc.exempt = (acc.exempt ?? 0) + parseFloat(columns[9] || '0');
+                            acc.taxable = (acc.taxable ?? 0) + parseFloat(columns[10] || '0');
+                            acc.inputTax = (acc.inputTax ?? 0) + parseFloat(columns[11] || '0');
+                            return acc;
+                        }, { exempt: 0, taxable: 0, inputTax: 0 });
+                    }
+    
+                    setDatPreview({
+                        fileName: file.name,
+                        content: result.content,
+                        isViewing: true,
+                        reportType,
+                        totals,
+                    });
+                    setIsPreviewOpen(true);
+                } else {
+                    if (result.error?.includes('File not found')) {
+                        toast({ title: 'File Not Found', description: 'This file may have been deleted. Please refresh the list.', variant: 'destructive'});
+                        removeFile(file.id);
+                    } else {
+                        toast({ title: 'Error', description: result.error || 'Failed to fetch file content.', variant: 'destructive' });
+                    }
+                }
+            } finally {
+                setViewingFileId(null);
+            }
+        })
+    }
+
+  const handleDatGeneration = async (file: File, args: any): Promise<boolean> => {
     if (!selectedProfile) {
         toast({ title: 'No Profile Selected', description: 'Please select a tax profile before generating a DAT file.', variant: 'destructive'});
-        return;
+        return false;
     }
     const profile = profiles.find(p => p.tpTIN === selectedProfile);
     if (!profile) {
         toast({ title: 'Profile not found', description: 'Please select a valid profile.', variant: 'destructive'});
-        return;
+        return false;
     }
     
     if (!user?.folderId) {
         toast({ title: 'User folder not found', description: 'Please log in again to sync your user folder.', variant: 'destructive'});
-        return;
+        return false;
     }
     
     const { month, year, reportType, sawtSchedule } = args;
@@ -182,7 +419,7 @@ export function HomeContent({
     if (reportType === "Summary Alphalist of Withholding Tax (SAWT)") {
         if (!sawtSchedule) {
             toast({ title: 'Schedule Missing', description: 'Please select a schedule for SAWT.', variant: 'destructive' });
-            return;
+            return false;
         }
         const result = await convertExcelToDat(formData);
         if (result.success && result.datContent && result.fileName) {
@@ -197,6 +434,7 @@ export function HomeContent({
                 }
             });
             setIsPreviewOpen(true);
+            return true;
         } else if (!result.success && result.errors && result.errors.length > 0) {
             setValidationErrors(result.errors);
             setIsErrorsOpen(true);
@@ -216,7 +454,7 @@ export function HomeContent({
                 variant: 'destructive',
             });
         }
-        return;
+        return false;
     }
 
 
@@ -229,6 +467,8 @@ export function HomeContent({
             });
             setCurrentGenerationArgs({ month, year, profile, folderId: user.folderId, reportType: reportType });
             setIsNonCreditableDialogOpen(true);
+            // We return true here to signal the process has moved to the next step
+            return true;
         } else if (!validationResult.success && validationResult.errors && validationResult.errors.length > 0) {
             setValidationErrors(validationResult.errors);
             setIsErrorsOpen(true);
@@ -239,20 +479,30 @@ export function HomeContent({
                 variant: 'destructive',
             });
         }
-        return;
+        return false;
     }
 
     const result = await convertExcelToDat(formData);
 
-    if (result.success && result.datContent !== null && result.fileName) {
-        if (reportType.includes('1601-FQ')) {
-             addOrUpdateFile();
-        }
-        
-        if (reportType === 'Summary of Sales (SLS)') {
+    if (result.success && result.datContent !== null) {
+        if(result.fileName) {
             addOrUpdateFile();
+        }
+
+        if (reportType === "Summary of Importations (SLI)") {
+            setDatPreview({
+                fileName: result.fileName!,
+                content: result.datContent,
+                reportType: 'importations',
+                totals: {
+                    exempt: result.totalExempt ?? 0,
+                    taxable: result.totalTaxableSales ?? 0, // Mapped to taxable in preview
+                    inputTax: result.totalInputTax ?? 0,
+                }
+            });
+        } else if (reportType === 'Summary of Sales (SLS)') {
             setDatPreview({ 
-                fileName: result.fileName, 
+                fileName: result.fileName!, 
                 content: result.datContent,
                 reportType: 'sales',
                 totals: {
@@ -263,9 +513,8 @@ export function HomeContent({
                 }
             });
         } else if (reportType === '1601-EQ (Schedule 1 and 2)') {
-            addOrUpdateFile();
             setDatPreview({ 
-                fileName: result.fileName, 
+                fileName: result.fileName!, 
                 content: result.datContent,
                 reportType: '1601eq',
                 totals: {
@@ -276,7 +525,7 @@ export function HomeContent({
             });
         } else if (reportType === '1601-FQ (Schedule 1, 2, and 3)') {
              setDatPreview({ 
-                fileName: result.fileName, 
+                fileName: result.fileName!, 
                 content: result.datContent,
                 reportType: '1601fq',
                 totals: {
@@ -285,20 +534,48 @@ export function HomeContent({
                     exemptIncome: result.totalExemptIncomePayment ?? 0,
                 }
             });
+        } else if (reportType === '1604-E (Schedule 3 and 4)') {
+            setDatPreview({
+                fileName: result.fileName!,
+                content: result.datContent,
+                reportType: '1604e',
+                totals: {
+                    withholdingTax: result.totalWithholdingTax ?? 0,
+                    exemptIncome: result.totalExemptIncomePayment ?? 0,
+                }
+            });
+        } else if (reportType === '1604-F (Schedule 4, 5, and 7)') {
+            setDatPreview({
+                fileName: result.fileName!,
+                content: result.datContent,
+                reportType: '1604f',
+                totals: {
+                    withholdingTax: result.totalWithholdingTax ?? 0,
+                    services: result.totalServices ?? 0,
+                    exemptIncome: result.totalExemptIncomePayment ?? 0,
+                }
+            });
         } else {
              setDatPreview({ 
-                fileName: result.fileName, 
+                fileName: result.fileName || 'preview.txt', 
                 content: result.datContent,
                 reportType: 'none',
                 totals: {}
             });
         }
         setIsPreviewOpen(true);
+        return true;
     } else if (!result.success && result.errors && result.errors.length > 0) {
         setValidationErrors(result.errors);
         setIsErrorsOpen(true);
     } else if (!result.success && result.fileExists) {
-        const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+        let reportingPeriod: string;
+        if (reportType.includes('1604')) {
+            const fiscalEndMonth = parseInt(profile.monthSelect, 10);
+            reportingPeriod = new Date(parseInt(year), fiscalEndMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+        } else {
+            reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+        }
         setOverwriteState({
             isOpen: true,
             fileName: result.fileName || 'Unknown',
@@ -313,6 +590,7 @@ export function HomeContent({
             variant: 'destructive',
         });
     }
+    return false;
   };
 
   const handleOverwriteConfirm = async () => {
@@ -352,6 +630,17 @@ export function HomeContent({
                     inputTax: result.totalInputTax ?? 0,
                 }
             });
+        } else if (overwriteState.transactionType === 'Importations') {
+             setDatPreview({
+                fileName: result.fileName,
+                content: result.datContent,
+                reportType: 'importations',
+                totals: {
+                    exempt: result.totalExempt ?? 0,
+                    taxable: result.totalTaxableSales ?? 0,
+                    inputTax: result.totalInputTax ?? 0,
+                }
+            });
         } else if (overwriteState.transactionType === '1601-EQ') {
             setDatPreview({
                 fileName: result.fileName,
@@ -382,6 +671,27 @@ export function HomeContent({
                 totals: {
                     taxableIncome: result.totalTaxableIncomePayment ?? 0,
                     withholdingTax: result.totalWithholdingTax ?? 0,
+                }
+            });
+        } else if (overwriteState.transactionType === '1604-E') {
+             setDatPreview({
+                fileName: result.fileName,
+                content: result.datContent,
+                reportType: '1604e',
+                totals: {
+                    withholdingTax: result.totalWithholdingTax ?? 0,
+                    exemptIncome: result.totalExemptIncomePayment ?? 0,
+                }
+            });
+        } else if (overwriteState.transactionType === '1604-F') {
+             setDatPreview({
+                fileName: result.fileName,
+                content: result.datContent,
+                reportType: '1604f',
+                totals: {
+                    withholdingTax: result.totalWithholdingTax ?? 0,
+                    services: result.totalServices ?? 0,
+                    exemptIncome: result.totalExemptIncomePayment ?? 0,
                 }
             });
         }
@@ -464,17 +774,17 @@ export function HomeContent({
     }
   }
 
-  const handleCertGeneration = async (file: File, args: any) => {
+  const handleCertGeneration = async (file: File, args: any): Promise<boolean> => {
     const { certificateType, signatoryName, signatoryTIN, signatoryPosition, signatureFile, pdfSize, collate, signatureX, signatureY } = args;
 
     if (!selectedProfile) {
         toast({ title: 'No Profile Selected', description: 'Please select a tax profile before generating a certificate.', variant: 'destructive'});
-        return;
+        return false;
     }
     const profile = profiles.find(p => p.tpTIN === selectedProfile);
     if (!profile) {
         toast({ title: 'Profile not found', description: 'Please select a valid profile.', variant: 'destructive'});
-        return;
+        return false;
     }
     
     const formData = new FormData();
@@ -517,6 +827,7 @@ export function HomeContent({
             title: "Success",
             description: "Your PDF certificate has been generated and downloaded.",
         });
+        return true;
 
     } else if (result.errors && result.errors.length > 0) {
         setValidationErrors(result.errors);
@@ -528,6 +839,7 @@ export function HomeContent({
             variant: "destructive",
         });
     }
+    return false;
   };
 
   const showLoading = isPending || !initialFetchComplete;
@@ -641,18 +953,33 @@ export function HomeContent({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{selectedProfile ? 'Profile Stats' : 'Total Files'}</CardTitle>
-                            <FileIcon className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{analytics.totalFiles}</div>
-                            <div className="space-x-1 text-xs text-muted-foreground">
-                            {Object.entries(analytics.typeCounts).map(([type, count]) => (
-                                <span key={type} className="bg-secondary px-1.5 py-0.5 rounded-full">{count} {type}</span>
-                            ))}
-                            </div>
-                        </CardContent>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{selectedProfile ? 'Profile Stats' : 'Total Files'}</CardTitle>
+                                <FileIcon className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{analytics.totalFiles}</div>
+                                {Object.keys(analytics.typeCounts).length > 0 ? (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="link" className="px-0 h-auto text-xs text-muted-foreground">
+                                                View Breakdown
+                                                <ChevronDown className="h-3 w-3 ml-1" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="start">
+                                            {Object.entries(analytics.typeCounts).map(([type, count]) => (
+                                                <DropdownMenuItem key={type} className="flex justify-between">
+                                                    <span>{type}</span>
+                                                    <span className="font-semibold ml-4">{count}</span>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                ) : (
+                                    <p className="text-xs text-muted-foreground">No files yet.</p>
+                                )}
+                            </CardContent>
                         </Card>
                         <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -673,15 +1000,26 @@ export function HomeContent({
                         <CardContent className="space-y-2">
                         {analytics.recentFiles.length > 0 ? (
                             analytics.recentFiles.map(file => (
-                            <Link href="/dat-files" key={file.id} className="block p-2 -m-2 rounded-md hover:bg-muted/50 transition-colors">
-                                <div className="flex items-center">
-                                <FileIcon className="h-5 w-5 mr-3 text-primary flex-shrink-0" />
+                            <div key={file.id} className="flex items-center justify-between p-2 -m-2 rounded-md hover:bg-muted/50 transition-colors">
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium leading-none truncate">{file.name}</p>
                                     <p className="text-sm text-muted-foreground">{format(new Date(file.modifiedTime), 'PPp')}</p>
                                 </div>
-                                </div>
-                            </Link>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 flex-shrink-0 ml-4 flex items-center justify-center"
+                                    onClick={() => handleViewFile(file)}
+                                    disabled={isViewing && viewingFileId === file.id}
+                                >
+                                    <span className="sr-only">View File</span>
+                                    {isViewing && viewingFileId === file.id ? (
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                    ) : (
+                                        <Eye className="h-5 w-5" />
+                                    )}
+                                </Button>
+                            </div>
                             ))
                         ) : (
                             <p className="text-sm text-muted-foreground text-center pt-8">No files generated for this profile yet.</p>

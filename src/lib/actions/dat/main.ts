@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import type { TaxProfile } from '@/lib/schemas';
@@ -8,6 +9,9 @@ import { validateExcelForPurchases, createPurchasesDatFile, generatePurchasesDat
 import { generate1601EQDatFile } from './1601eq';
 import { generate1601FQDatFile } from './1601fq';
 import { validateAndProcessSAWT } from './sawt';
+import { generateImportationDatFile } from './importations';
+import { generate1604EDatFile } from './1604e';
+import { generate1604FDatFile } from './1604f';
 
 export async function convertExcelToDat(formData: FormData): Promise<DatFileResult> {
     const file = formData.get('file') as File | null;
@@ -38,11 +42,20 @@ export async function convertExcelToDat(formData: FormData): Promise<DatFileResu
         if (reportType === "Summary of Purchases (SLP)") {
             return await validateExcelForPurchases(formData);
         }
+         if (reportType === "Summary of Importations (SLI)") {
+            return await generateImportationDatFile(file, profile, month, year, folderId, false);
+        }
         if (reportType === "1601-EQ (Schedule 1 and 2)") {
             return await generate1601EQDatFile(file, profile, month, year, folderId, false);
         }
         if (reportType === "1601-FQ (Schedule 1, 2, and 3)") {
             return await generate1601FQDatFile(file, profile, month, year, folderId, false);
+        }
+        if (reportType === "1604-E (Schedule 3 and 4)") {
+            return await generate1604EDatFile(file, profile, year, folderId, false);
+        }
+        if (reportType === "1604-F (Schedule 4, 5, and 7)") {
+            return await generate1604FDatFile(file, profile, year, folderId, false);
         }
         if (reportType === "Summary Alphalist of Withholding Tax (SAWT)") {
             if (!schedule) {
@@ -88,9 +101,13 @@ export async function overwriteDatFile(formData: FormData): Promise<DatFileResul
      const profile: TaxProfile = JSON.parse(profileString);
 
     try {
+        if (!file) return { ...defaultErrorResult, error: 'Missing file for overwrite.' };
+
         if (reportType === "Summary of Sales (SLS)") {
-            if (!file) return { ...defaultErrorResult, error: 'Missing file for overwrite.' };
             return await generateSalesDatFile(file, profile, month, year, folderId, true);
+        }
+         if (reportType === "Summary of Importations (SLI)") {
+            return await generateImportationDatFile(file, profile, month, year, folderId, true);
         }
         if (reportType === "Summary of Purchases (SLP)") {
             if (!processedDataString || nonCreditableTaxString === null) return { ...defaultErrorResult, error: 'Missing processed data for overwrite.' };
@@ -99,15 +116,19 @@ export async function overwriteDatFile(formData: FormData): Promise<DatFileResul
             return await generatePurchasesDatFile(processedData, profile, month, year, nonCreditableInputTax, folderId, true);
         }
         if (reportType === "1601-EQ (Schedule 1 and 2)") {
-             if (!file) return { ...defaultErrorResult, error: 'Missing file for overwrite.' };
              return await generate1601EQDatFile(file, profile, month, year, folderId, true);
         }
          if (reportType === "1601-FQ (Schedule 1, 2, and 3)") {
-             if (!file) return { ...defaultErrorResult, error: 'Missing file for overwrite.' };
              return await generate1601FQDatFile(file, profile, month, year, folderId, true);
         }
+        if (reportType === "1604-E (Schedule 3 and 4)") {
+             return await generate1604EDatFile(file, profile, year, folderId, true);
+        }
+        if (reportType === "1604-F (Schedule 4, 5, and 7)") {
+            return await generate1604FDatFile(file, profile, year, folderId, true);
+       }
         if (reportType === "Summary Alphalist of Withholding Tax (SAWT)") {
-            if (!file || !schedule) return { ...defaultErrorResult, error: 'Missing file or schedule for SAWT overwrite.' };
+            if (!schedule) return { ...defaultErrorResult, error: 'Missing schedule for SAWT overwrite.' };
             return await validateAndProcessSAWT(formData, true);
         }
 

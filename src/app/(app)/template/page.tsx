@@ -13,7 +13,7 @@ const vatReliefTemplate = {
   files: [
     { name: 'Sales', id: '1zdGeZzGWzBAdZ9yd2qxtWuZpQL2SFvPx' },
     { name: 'Purchases', id: '1vdDNVY6MCU1RFPnE3FNhddUa55q33rf8' },
-    { name: 'Importations', id: null },
+    { name: 'Importations', id: '1QpRVpv6GralxkBlY8RzdSW97t9N3N5v2' },
   ],
 };
 
@@ -32,8 +32,8 @@ const alphalistTemplate = {
       name: 'Annual',
       files: [
         { name: '1604C Sched 1 & 2', id: null },
-        { name: '1604E Sched 3 & 4', id: null },
-        { name: '1604F Sched 4, 5 & 6', id: null },
+        { name: '1604E Sched 3 & 4', id: '1vjFumPWlklkgPLkuYC3cXUibmxDO3jgd' },
+        { name: '1604F Sched 4, 5 & 6', id: '1TT5ke0C09xA-3cl5b_gbt1MS3S0DNwik' },
       ],
     },
   ],

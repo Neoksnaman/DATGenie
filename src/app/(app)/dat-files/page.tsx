@@ -19,12 +19,14 @@ import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialo
 import { useDatFiles } from '@/hooks/use-dat-files';
 import { useRefresh } from '@/hooks/use-refresh';
 import JSZip from 'jszip';
-import { generateSalesExcel, generatePurchasesExcel, generate1601EQExcel, generate1601FQExcel, generateSawtExcel } from '@/lib/actions/excel';
+import { generateSalesExcel, generatePurchasesExcel, generate1601EQExcel, generate1601FQExcel, generateSawtExcel, generateImportationsExcel, generate1604EExcel, generate1604FExcel } from '@/lib/actions/excel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTaxProfiles } from '@/hooks/use-tax-profiles';
 
 
 function DatFilesContent() {
     const { files, isPending, initialFetchComplete, removeFile, fetchFiles } = useDatFiles();
+    const { profiles } = useTaxProfiles();
     const { setRefreshFunction } = useRefresh();
     const [isViewing, startViewingTransition] = useTransition();
     const [isDownloading, startDownloadingTransition] = useTransition();
@@ -88,6 +90,24 @@ function DatFilesContent() {
             const year = fileName.substring(yearIndex, yearIndex + 4);
             const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
             return { transactionType: '1601-FQ', reportingPeriod, year, month, tin };
+        }
+        
+        if (fileName.includes('1604F')) {
+            const dateStartIndex = tinAndBranchLength;
+            const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
+            const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
+            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
+            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
+            return { transactionType: '1604-F', reportingPeriod, year, month, tin };
+        }
+
+        if (fileName.includes('1604E')) {
+            const dateStartIndex = tinAndBranchLength;
+            const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
+            const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
+            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
+            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
+            return { transactionType: '1604-E', reportingPeriod, year, month, tin };
         }
 
         const sortedSawtSchedules = sawtSchedules.sort((a, b) => b.length - a.length);
@@ -189,6 +209,35 @@ function DatFilesContent() {
                             const cols = footer3.split(',');
                             totals.exemptIncome = parseFloat(cols[5] || '0');
                         }
+                    } else if (transactionType.includes('1604-E')) {
+                        reportType = '1604e';
+                        const footer3 = lines.find(line => line.startsWith('C3,'));
+                        const footer4 = lines.find(line => line.startsWith('C4,'));
+                        if (footer3) {
+                            const cols = footer3.split(',');
+                            totals.withholdingTax = parseFloat(cols[5] || '0');
+                        }
+                        if (footer4) {
+                             const cols = footer4.split(',');
+                            totals.exemptIncome = parseFloat(cols[5] || '0');
+                        }
+                    } else if (transactionType.includes('1604-F')) {
+                        reportType = '1604f';
+                        const footer4 = lines.find(line => line.startsWith('C4,'));
+                        const footer5 = lines.find(line => line.startsWith('C5,'));
+                        const footer6 = lines.find(line => line.startsWith('C6,'));
+                         if (footer4) {
+                            const cols = footer4.split(',');
+                            totals.withholdingTax = parseFloat(cols[6] || '0');
+                        }
+                         if (footer5) {
+                            const cols = footer5.split(',');
+                            totals.services = parseFloat(cols[7] || '0');
+                        }
+                         if (footer6) {
+                            const cols = footer6.split(',');
+                            totals.exemptIncome = parseFloat(cols[5] || '0');
+                        }
                     } else if (transactionType.startsWith('SAWT')) {
                         reportType = 'sawt';
                         const footer = lines.find(line => line.startsWith('CSAWT,'));
@@ -221,6 +270,16 @@ function DatFilesContent() {
                             acc.inputTax = (acc.inputTax ?? 0) + parseFloat(columns[14] || '0');
                             return acc;
                         }, { exempt: 0, zeroRated: 0, services: 0, capitalGoods: 0, otherGoods: 0, inputTax: 0 });
+                    } else if (transactionType === 'Importations') {
+                        reportType = 'importations';
+                        const detailLines = lines.filter(line => line.startsWith('D,'));
+                        totals = detailLines.reduce((acc, line) => {
+                            const columns = line.split(',');
+                            acc.exempt = (acc.exempt ?? 0) + parseFloat(columns[9] || '0');
+                            acc.taxable = (acc.taxable ?? 0) + parseFloat(columns[10] || '0');
+                            acc.inputTax = (acc.inputTax ?? 0) + parseFloat(columns[11] || '0');
+                            return acc;
+                        }, { exempt: 0, taxable: 0, inputTax: 0 });
                     }
     
                     setPreviewData({
@@ -388,10 +447,16 @@ function DatFilesContent() {
                 result = await generateSalesExcel(fileIds, fileNames);
             } else if (transactionType === 'Purchases') {
                 result = await generatePurchasesExcel(fileIds, fileNames);
+            } else if (transactionType === 'Importations') {
+                result = await generateImportationsExcel(fileIds, fileNames);
             } else if (transactionType.includes('1601-EQ')) {
                 result = await generate1601EQExcel(fileIds, fileNames);
             } else if (transactionType.includes('1601-FQ')) {
                 result = await generate1601FQExcel(fileIds, fileNames);
+            } else if (transactionType.includes('1604-E')) {
+                result = await generate1604EExcel(fileIds, fileNames, profiles);
+            } else if (transactionType.includes('1604-F')) {
+                result = await generate1604FExcel(fileIds, fileNames, profiles);
             } else {
                 toast({
                     title: "Not Implemented",
@@ -672,17 +737,17 @@ function DatFilesContent() {
                                                     <TableCell>{format(new Date(file.modifiedTime), 'PP')}</TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center justify-end gap-2">
-                                                            <Button variant="ghost" size="icon" onClick={() => handleViewFile(file)} disabled={isDisabled}>
-                                                                {isFileBeingViewed ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewFile(file)} disabled={isDisabled}>
                                                                 <span className="sr-only">View</span>
+                                                                {isFileBeingViewed ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                                                             </Button>
-                                                            <Button variant="ghost" size="icon" onClick={() => handleDownloadFile(file)} disabled={isDisabled}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadFile(file)} disabled={isDisabled}>
+                                                                 <span className="sr-only">Download</span>
                                                                 {isFileBeingDownloaded ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-                                                                <span className="sr-only">Download</span>
                                                             </Button>
-                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(file)} disabled={isDisabled}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDeleteClick(file)} disabled={isDisabled}>
+                                                                 <span className="sr-only">Delete</span>
                                                                 {isFileBeingDeleted ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash className="h-4 w-4" />}
-                                                                <span className="sr-only">Delete</span>
                                                             </Button>
                                                         </div>
                                                     </TableCell>
@@ -814,3 +879,8 @@ export default function DatFilesPage() {
     
 
     
+
+    
+
+
+

@@ -7,6 +7,9 @@ import { generatePurchasesExcel } from './excel/purchases';
 import { generate1601EQExcel } from './excel/1601eq';
 import { generate1601FQExcel } from './excel/1601fq';
 import { generateSawtExcel } from './excel/sawt';
+import { generateImportationsExcel } from './excel/importations';
+import { generate1604EExcel } from './excel/1604e';
+import { generate1604FExcel } from './excel/1604f';
 
 
 export {
@@ -14,6 +17,8 @@ export {
     generatePurchasesExcel,
     generate1601EQExcel,
     generate1601FQExcel,
-    generateSawtExcel
+    generateSawtExcel,
+    generateImportationsExcel,
+    generate1604EExcel,
+    generate1604FExcel,
 };
-

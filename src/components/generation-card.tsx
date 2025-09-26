@@ -18,13 +18,13 @@ interface GenerationCardProps {
   title: string;
   description: string;
   buttonText: string;
-  onGenerate: (file: File, args: any) => Promise<void>;
+  onGenerate: (file: File, args: any) => Promise<boolean>;
   icon: React.ReactNode;
   isDatGeneration: boolean;
   reminders?: string[];
 }
 
-const months = [
+export const months = [
     { name: "January", value: "01" },
     { name: "February", value: "02" },
     { name: "March", value: "03" },
@@ -39,23 +39,20 @@ const months = [
     { name: "December", value: "12" }
 ];
 
-const reportTypes = [
+export const reportTypes = [
     "Summary of Sales (SLS)",
     "Summary of Purchases (SLP)",
+    "Summary of Importations (SLI)",
     "Summary Alphalist of Withholding Tax (SAWT)",
     "1601-EQ (Schedule 1 and 2)",
     "1601-FQ (Schedule 1, 2, and 3)",
-    "Summary of Importations (SLI)",
+    "1604-E (Schedule 3 and 4)",
+    "1604-F (Schedule 4, 5, and 7)",
     "1604-CF (Schedule 3 and 4)",
-    "1604-E (Schedule 4)",
-    "1604-F (Schedule 5, 6, and 7)",
 ];
 
 const disabledReportTypes = [
-    "Summary of Importations (SLI)",
     "1604-CF (Schedule 3 and 4)",
-    "1604-E (Schedule 4)",
-    "1604-F (Schedule 5, 6, and 7)",
 ];
 
 const sawtSchedules = [
@@ -78,10 +75,18 @@ const disabledCertificateTypes = [
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: currentYear - 1999 }, (_, i) => (currentYear - i).toString());
 
-export function GenerationCard({ title, description, buttonText, onGenerate, icon, isDatGeneration, reminders }: GenerationCardProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+export function GenerationCard({ 
+    title, 
+    description, 
+    buttonText, 
+    onGenerate, 
+    icon, 
+    isDatGeneration, 
+    reminders,
+}: GenerationCardProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
   
   const [progress, setProgress] = useState(0);
@@ -102,6 +107,10 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
   const [collate, setCollate] = useState<'single' | 'multiple'>('single');
   const [signatureX, setSignatureX] = useState(150);
   const [signatureY, setSignatureY] = useState(185);
+
+  const handleFileSelect = (file: File | null) => {
+    setSelectedFile(file);
+  };
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -121,6 +130,28 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
       clearInterval(timer);
     };
   }, [isGenerating, isDatGeneration]);
+  
+  const isAnnualReport = reportType?.includes('1604');
+
+  useEffect(() => {
+    if (isAnnualReport) {
+      setMonth('12');
+    }
+  }, [isAnnualReport]);
+
+  useEffect(() => {
+    if (isDatGeneration) {
+        setSelectedFile(null); // Clear file when DAT report type changes
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportType, isDatGeneration]);
+
+  useEffect(() => {
+    if (!isDatGeneration) {
+        setSelectedFile(null); // Clear file when cert type changes
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [certificateType, isDatGeneration]);
 
   useEffect(() => {
     if (certificateType === certificateTypes[0]) { // 2307
@@ -137,7 +168,7 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
     const file = files?.[0];
     if (file) {
       if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.type === 'application/vnd.ms-excel') {
-        setSelectedFile(file);
+        handleFileSelect(file);
       } else {
         toast({
           title: 'Invalid File Type',
@@ -196,6 +227,7 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
     e.stopPropagation();
     setIsDragging(false);
     handleFileChange(e.dataTransfer.files);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGenerateClick = async () => {
@@ -225,10 +257,16 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
         } else {
             args = { certificateType, signatoryName, signatoryTIN, signatoryPosition, signatureFile, pdfSize, collate, signatureX, signatureY };
         }
-        await onGenerate(selectedFile, args);
-        if(!isDatGeneration) {
-           setProgress(100);
-           setTimeout(() => setIsGenerating(false), 500); // Keep progress bar at 100% briefly
+        const success = await onGenerate(selectedFile, args);
+
+        if (success) {
+            if (isDatGeneration) {
+                // Clear the file on successful DAT generation
+                setSelectedFile(null);
+            } else {
+                setProgress(100);
+                setTimeout(() => setIsGenerating(false), 500); // Keep progress bar at 100% briefly
+            }
         }
     } catch (error) {
          // Toast is handled by the calling component
@@ -243,7 +281,7 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
   }
 
   const clearFile = () => {
-    setSelectedFile(null);
+    handleFileSelect(null);
     if (!isDatGeneration) {
         setSignatureFile(null);
     }
@@ -268,7 +306,7 @@ export function GenerationCard({ title, description, buttonText, onGenerate, ico
                  <div className="space-y-2">
                     <Label>Reporting Period</Label>
                     <div className="grid grid-cols-2 gap-2">
-                        <Select value={month} onValueChange={setMonth}>
+                        <Select value={month} onValueChange={setMonth} disabled={isAnnualReport}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 {months.map(m => <SelectItem key={m.value} value={m.value}>{m.name}</SelectItem>)}

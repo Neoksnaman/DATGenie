@@ -25,13 +25,14 @@ interface Totals {
     taxableIncome?: number;
     exemptIncome?: number;
     withholdingTax?: number;
+    taxable?: number; // For importations
 }
 
 export interface DatPreviewState {
     fileName: string;
     content: string;
     isViewing?: boolean;
-    reportType?: 'sales' | 'purchases' | '1601eq' | 'sawt' | '1601fq' | 'none';
+    reportType?: 'sales' | 'purchases' | '1601eq' | 'sawt' | '1601fq' | 'importations' | '1604e' | '1604f' | 'none';
     totals?: Totals;
 }
 
@@ -106,6 +107,13 @@ export function DatPreviewDialog({
                         <p><span className="font-semibold">Total Output VAT:</span> {formatCurrency(totals.outputVat)}</p>
                     </>
                 )}
+                 {reportType === 'importations' && (
+                    <>
+                        <p><span className="font-semibold">Total Exempt:</span> {formatCurrency(totals.exempt)}</p>
+                        <p><span className="font-semibold">Total Taxable:</span> {formatCurrency(totals.taxable)}</p>
+                        <p><span className="font-semibold">Total Input VAT:</span> {formatCurrency(totals.inputTax)}</p>
+                    </>
+                )}
                 {reportType === 'purchases' && (
                     <>
                         <p><span className="font-semibold">Total Exempt Purchases:</span> {formatCurrency(totals.exempt)}</p>
@@ -136,6 +144,19 @@ export function DatPreviewDialog({
                         <p><span className="font-semibold">Total Exempt Income Payment:</span> {formatCurrency(totals.exemptIncome)}</p>
                     </>
                 )}
+                {reportType === '1604f' && (
+                    <>
+                        <p><span className="font-semibold">Total Withholding Tax:</span> {formatCurrency(totals.withholdingTax)}</p>
+                        <p><span className="font-semibold">Total Fringe Benefit Tax:</span> {formatCurrency(totals.services)}</p>
+                        <p><span className="font-semibold">Total Exempt Income Payment:</span> {formatCurrency(totals.exemptIncome)}</p>
+                    </>
+                )}
+                 {reportType === '1604e' && (
+                    <>
+                        <p><span className="font-semibold">Total Withholding Tax:</span> {formatCurrency(totals.withholdingTax)}</p>
+                        <p><span className="font-semibold">Total Exempt Income Payment:</span> {formatCurrency(totals.exemptIncome)}</p>
+                    </>
+                )}
             </div>
             <ScrollArea className="flex-1 border rounded-md">
                 <pre className="p-4 text-xs font-mono whitespace-pre">{content}</pre>
@@ -154,5 +175,3 @@ export function DatPreviewDialog({
     </Dialog>
   );
 }
-
-    

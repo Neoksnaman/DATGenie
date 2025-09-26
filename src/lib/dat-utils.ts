@@ -51,13 +51,17 @@ export function sanitizeAndValidateString(input: any, fieldName: string, maxLeng
         .trim();
 
     if (processedString.length > maxLength) {
-        return { value: processedString, error: `${fullFieldName} must be ${maxLength} characters or less.` };
+        const errorMessage = errorPrefix
+            ? `${errorPrefix}: ${fieldName} must be ${maxLength} characters or less.`
+            : `${fieldName} must be ${maxLength} characters or less.`;
+        return { value: processedString, error: errorMessage };
     }
 
     return { value: processedString, error: null };
 }
 
-export function sanitizeAndValidateNumber(input: any, fieldName: string): { value: string, error: string | null } {
+export function sanitizeAndValidateNumber(input: any, fieldName: string, errorPrefix?: string): { value: string, error: string | null } {
+    const fullFieldName = errorPrefix ? `${errorPrefix}` : fieldName;
     if (input === null || input === undefined || String(input).trim() === '') {
         return { value: '0', error: null };
     }
@@ -66,7 +70,7 @@ export function sanitizeAndValidateNumber(input: any, fieldName: string): { valu
     const num = parseFloat(valueAsString);
 
     if (isNaN(num)) {
-        return { value: String(input), error: `${fieldName} contains an invalid number.` };
+        return { value: String(input), error: `${fullFieldName} contains an invalid number.` };
     }
     
     const roundedNum = Math.round(num * 100) / 100;

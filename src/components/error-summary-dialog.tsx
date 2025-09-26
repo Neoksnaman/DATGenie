@@ -28,8 +28,8 @@ export function ErrorSummaryDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-full flex flex-col p-0 bg-white text-black">
-        <DialogHeader className="p-6">
+      <DialogContent className="max-w-2xl w-full flex flex-col p-0 bg-white text-black max-h-[80vh]">
+        <DialogHeader className="p-6 pb-4 shrink-0">
             <div className="flex items-center gap-4">
                 <div className="flex-shrink-0 w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
                     <AlertTriangle className="w-6 h-6 text-destructive" />
@@ -42,18 +42,16 @@ export function ErrorSummaryDialog({
                 </div>
             </div>
         </DialogHeader>
-        <div className="px-6 pb-6 flex-1 overflow-hidden">
-            <ScrollArea className="h-full max-h-[50vh] pr-4 -mr-4">
-                <div className="space-y-2 font-mono text-sm">
-                    {errors.map((error, index) => (
-                        <div key={index} className="p-3 rounded-md border bg-slate-50 text-slate-700 text-xs">
-                           {error}
-                        </div>
-                    ))}
-                </div>
-            </ScrollArea>
-        </div>
-        <DialogFooter className="p-4 border-t">
+        <ScrollArea className="px-6 pb-6 flex-1 min-h-0">
+             <div className="space-y-2 font-mono text-sm pr-4">
+                {errors.map((error, index) => (
+                    <div key={index} className="p-3 rounded-md border bg-slate-50 text-slate-700 text-xs">
+                       {error}
+                    </div>
+                ))}
+            </div>
+        </ScrollArea>
+        <DialogFooter className="p-4 border-t shrink-0">
           <Button onClick={() => onOpenChange(false)}>
             Close
           </Button>
