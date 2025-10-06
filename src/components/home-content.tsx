@@ -349,7 +349,7 @@ export function HomeContent({
                         if (footer2) {
                             const cols = footer2.split(',');
                             grossComp += parseFloat(cols[5] || '0') + parseFloat(cols[19] || '0');
-                            taxWithheld += parseFloat(cols[43] || '0');
+                            taxWithheld += parseFloat(cols[42] || '0');
                         }
 
                         totals.taxableIncome = grossComp;
