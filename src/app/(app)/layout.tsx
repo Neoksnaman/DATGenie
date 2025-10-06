@@ -3,7 +3,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { LogOut, FileSpreadsheet, History, RefreshCw, Home, Users, User, Loader2 } from 'lucide-react';
+import { LogOut, FileSpreadsheet, History, RefreshCw, Home, Users, User, Loader2, Coffee } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,7 @@ import {
   SidebarTrigger,
   SidebarInset,
   useSidebar,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -92,6 +93,7 @@ function LayoutBody({ children }: { children: React.ReactNode }) {
     const [isLoggingOut, startLogoutTransition] = useTransition();
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
     const { refresh } = useRefresh();
+    const { toast } = useToast();
     
     const handleRefresh = () => {
       if (refresh) {
@@ -183,8 +185,8 @@ function AppLayoutContent({
   children: React.ReactNode;
 }) {
   const { user, isLoading: isUserLoading } = useUser();
-  const { isPending: isProfilesPending, initialFetchComplete: profilesFetchComplete } = useTaxProfiles();
-  const { isPending: isFilesPending, initialFetchComplete: filesFetchComplete } = useDatFiles();
+  const { initialFetchComplete: profilesFetchComplete } = useTaxProfiles();
+  const { initialFetchComplete: filesFetchComplete } = useDatFiles();
 
   const isAppLoading = isUserLoading || !profilesFetchComplete || !filesFetchComplete;
 
@@ -209,7 +211,19 @@ function AppLayoutContent({
               </div>
           </SidebarHeader>
           <SidebarContent>
-            <SidebarNavigation />
+            <div className="flex flex-col justify-between h-full">
+                <SidebarNavigation />
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild variant="ghost">
+                            <Link href="https://ko-fi.com/datgenie" target="_blank" rel="noopener noreferrer">
+                                <Coffee className="text-primary" />
+                                Buy Me a Coffee
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </div>
           </SidebarContent>
         </Sidebar>
         <LayoutBody>{children}</LayoutBody>

@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import type { TaxProfile } from '@/lib/schemas';
@@ -69,7 +70,7 @@ export async function validateExcelForPurchases(formData: FormData): Promise<Dat
             { name: 'Purchases of Other Goods', index: 11 }, { name: 'Input Tax', index: 12 },
         ];
         numericFields.forEach(field => {
-            const result = sanitizeAndValidateNumber(processedRow[field.index], `${errorPrefix}: ${field.name}`);
+            const result = sanitizeAndValidateNumber(processedRow[field.index], `${field.name}`, errorPrefix);
             if (result.error) validationErrors.push(result.error);
             processedRow[field.index] = result.value;
         });

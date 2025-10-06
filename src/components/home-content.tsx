@@ -143,6 +143,15 @@ export function HomeContent({
             return { transactionType: '1604-E', reportingPeriod, year, month, tin };
         }
 
+        if (fileName.includes('1604C')) {
+            const dateStartIndex = tinAndBranchLength;
+            const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
+            const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
+            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
+            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
+            return { transactionType: '1604-C', reportingPeriod, year, month, tin };
+        }
+
         const sortedSawtSchedules = sawtSchedules.sort((a, b) => b.length - a.length);
         const sawtScheduleMatch = sortedSawtSchedules.find(schedule => fileName.includes(schedule));
 
@@ -179,6 +188,7 @@ export function HomeContent({
       if (type.includes('1601-FQ')) return '1601-FQ';
       if (type.includes('1604-E')) return '1604-E';
       if (type.includes('1604-F')) return '1604-F';
+      if (type.includes('1604-C')) return '1604-C';
       if (type.includes('SAWT')) return `SAWT-${schedule}`;
       return type;
   }
@@ -202,6 +212,8 @@ export function HomeContent({
             simpleType = '1604-F';
         } else if (name.includes('1604E')) {
             simpleType = '1604-E';
+        } else if (name.includes('1604C')) {
+            simpleType = '1604-C';
         } else if (name.includes('1601EQ')) {
             simpleType = '1601-EQ';
         } else if (name.includes('1601FQ')) {
@@ -321,6 +333,28 @@ export function HomeContent({
                             const cols = footer6.split(',');
                             totals.exemptIncome = parseFloat(cols[5] || '0');
                         }
+                    } else if (transactionType.includes('1604-C')) {
+                        reportType = '1604c';
+                        const footer1 = lines.find(line => line.startsWith('C1,'));
+                        const footer2 = lines.find(line => line.startsWith('C2,'));
+                        let grossComp = 0;
+                        let taxWithheld = 0;
+                        
+                        if (footer1) {
+                            const cols = footer1.split(',');
+                            grossComp += parseFloat(cols[5] || '0') + parseFloat(cols[16] || '0');
+                            taxWithheld += parseFloat(cols[34] || '0');
+                        }
+                        
+                        if (footer2) {
+                            const cols = footer2.split(',');
+                            grossComp += parseFloat(cols[5] || '0') + parseFloat(cols[19] || '0');
+                            taxWithheld += parseFloat(cols[43] || '0');
+                        }
+
+                        totals.taxableIncome = grossComp;
+                        totals.withholdingTax = taxWithheld;
+
                     } else if (transactionType.startsWith('SAWT')) {
                         reportType = 'sawt';
                         const footer = lines.find(line => line.startsWith('CSAWT,'));
@@ -555,6 +589,16 @@ export function HomeContent({
                     exemptIncome: result.totalExemptIncomePayment ?? 0,
                 }
             });
+        } else if (reportType === '1604-C (Schedule 1 and 2)') {
+            setDatPreview({
+                fileName: result.fileName!,
+                content: result.datContent,
+                reportType: '1604c',
+                totals: {
+                    taxableIncome: result.totalTaxableIncomePayment ?? 0,
+                    withholdingTax: result.totalWithholdingTax ?? 0,
+                }
+            });
         } else {
              setDatPreview({ 
                 fileName: result.fileName || 'preview.txt', 
@@ -692,6 +736,16 @@ export function HomeContent({
                     withholdingTax: result.totalWithholdingTax ?? 0,
                     services: result.totalServices ?? 0,
                     exemptIncome: result.totalExemptIncomePayment ?? 0,
+                }
+            });
+        } else if (overwriteState.transactionType === '1604-C') {
+            setDatPreview({
+                fileName: result.fileName,
+                content: result.datContent,
+                reportType: '1604c',
+                totals: {
+                    taxableIncome: result.totalTaxableIncomePayment ?? 0,
+                    withholdingTax: result.totalWithholdingTax ?? 0,
                 }
             });
         }
@@ -1083,3 +1137,9 @@ export function HomeContent({
     </>
   );
 }
+
+    
+
+    
+
+    

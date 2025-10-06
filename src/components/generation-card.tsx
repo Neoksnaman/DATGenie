@@ -46,13 +46,12 @@ export const reportTypes = [
     "Summary Alphalist of Withholding Tax (SAWT)",
     "1601-EQ (Schedule 1 and 2)",
     "1601-FQ (Schedule 1, 2, and 3)",
+    "1604-C (Schedule 1 and 2)",
     "1604-E (Schedule 3 and 4)",
     "1604-F (Schedule 4, 5, and 7)",
-    "1604-CF (Schedule 3 and 4)",
 ];
 
-const disabledReportTypes = [
-    "1604-CF (Schedule 3 and 4)",
+const disabledReportTypes: string[] = [
 ];
 
 const sawtSchedules = [
@@ -582,3 +581,5 @@ export function GenerationCard({
     </Card>
   );
 }
+
+    

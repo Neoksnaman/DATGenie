@@ -44,6 +44,7 @@ export function sanitizeAndValidateString(input: any, fieldName: string, maxLeng
         .toUpperCase()
         .replace(/&/g, 'AND')
         .replace(/Ñ/g, 'N')
+        .replace(/(\r\n|\n|\r)/gm, " ") // Replace line breaks with a space
         .replace(/\s\s+/g, ' ')
         .trim()
         .replace(/[^A-Z0-9\s-]/g, '')

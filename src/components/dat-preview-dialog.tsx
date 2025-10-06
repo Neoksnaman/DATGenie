@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -32,7 +33,7 @@ export interface DatPreviewState {
     fileName: string;
     content: string;
     isViewing?: boolean;
-    reportType?: 'sales' | 'purchases' | '1601eq' | 'sawt' | '1601fq' | 'importations' | '1604e' | '1604f' | 'none';
+    reportType?: 'sales' | 'purchases' | '1601eq' | 'sawt' | '1601fq' | 'importations' | '1604e' | '1604f' | '1604c' | 'none';
     totals?: Totals;
 }
 
@@ -155,6 +156,12 @@ export function DatPreviewDialog({
                     <>
                         <p><span className="font-semibold">Total Withholding Tax:</span> {formatCurrency(totals.withholdingTax)}</p>
                         <p><span className="font-semibold">Total Exempt Income Payment:</span> {formatCurrency(totals.exemptIncome)}</p>
+                    </>
+                )}
+                 {reportType === '1604c' && (
+                    <>
+                        <p><span className="font-semibold">Total Gross Compensation:</span> {formatCurrency(totals.taxableIncome)}</p>
+                        <p><span className="font-semibold">Total Tax Withheld:</span> {formatCurrency(totals.withholdingTax)}</p>
                     </>
                 )}
             </div>

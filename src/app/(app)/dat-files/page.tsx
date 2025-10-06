@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import React, { useEffect, useState, useTransition, useCallback, useMemo, useRef } from 'react';
@@ -19,7 +17,7 @@ import { DeleteConfirmationDialog } from '@/components/delete-confirmation-dialo
 import { useDatFiles } from '@/hooks/use-dat-files';
 import { useRefresh } from '@/hooks/use-refresh';
 import JSZip from 'jszip';
-import { generateSalesExcel, generatePurchasesExcel, generate1601EQExcel, generate1601FQExcel, generateSawtExcel, generateImportationsExcel, generate1604EExcel, generate1604FExcel } from '@/lib/actions/excel';
+import { generateSalesExcel, generatePurchasesExcel, generate1601EQExcel, generate1601FQExcel, generateSawtExcel, generateImportationsExcel, generate1604EExcel, generate1604FExcel, generate1604CExcel } from '@/lib/actions/excel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTaxProfiles } from '@/hooks/use-tax-profiles';
 
@@ -125,6 +123,15 @@ function DatFilesContent() {
             const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
             const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
             return { transactionType: '1604-E', reportingPeriod, year, month, tin };
+        }
+
+        if (fileName.includes('1604C')) {
+            const dateStartIndex = tinAndBranchLength;
+            const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
+            const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
+            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
+            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
+            return { transactionType: '1604-C', reportingPeriod, year, month, tin };
         }
 
         const sortedSawtSchedules = sawtSchedules.sort((a, b) => b.length - a.length);
@@ -255,6 +262,28 @@ function DatFilesContent() {
                             const cols = footer6.split(',');
                             totals.exemptIncome = parseFloat(cols[5] || '0');
                         }
+                    } else if (transactionType.includes('1604-C')) {
+                        reportType = '1604c';
+                        const footer1 = lines.find(line => line.startsWith('C1,'));
+                        const footer2 = lines.find(line => line.startsWith('C2,'));
+                        let grossComp = 0;
+                        let taxWithheld = 0;
+                        
+                        if (footer1) {
+                            const cols = footer1.split(',');
+                            grossComp += parseFloat(cols[5] || '0') + parseFloat(cols[16] || '0');
+                            taxWithheld += parseFloat(cols[34] || '0');
+                        }
+                        
+                        if (footer2) {
+                            const cols = footer2.split(',');
+                            grossComp += parseFloat(cols[5] || '0') + parseFloat(cols[19] || '0');
+                            taxWithheld += parseFloat(cols[43] || '0');
+                        }
+
+                        totals.taxableIncome = grossComp;
+                        totals.withholdingTax = taxWithheld;
+
                     } else if (transactionType.startsWith('SAWT')) {
                         reportType = 'sawt';
                         const footer = lines.find(line => line.startsWith('CSAWT,'));
@@ -474,6 +503,8 @@ function DatFilesContent() {
                 result = await generate1604EExcel(fileIds, fileNames, profiles);
             } else if (transactionType.includes('1604-F')) {
                 result = await generate1604FExcel(fileIds, fileNames, profiles);
+            } else if (transactionType.includes('1604-C')) {
+                result = await generate1604CExcel(fileIds, fileNames, profiles);
             } else {
                 toast({
                     title: "Not Implemented",
@@ -874,27 +905,3 @@ function DatFilesContent() {
 export default function DatFilesPage() {
     return <DatFilesContent />;
 }
-
-    
-
-    
-
-
-
-
-
-    
-
-
-
-
-    
-
-
-
-
-    
-
-    
-
-    
