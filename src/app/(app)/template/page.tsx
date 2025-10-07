@@ -31,7 +31,7 @@ const alphalistTemplate = {
     {
       name: 'Annual',
       files: [
-        { name: '1604C Sched 1 & 2', id: null },
+        { name: '1604C Sched 1 & 2', id: '18Y3F9kjfxrDvUJ0_iw29xZMdbfjbgeff' },
         { name: '1604E Sched 3 & 4', id: '1vjFumPWlklkgPLkuYC3cXUibmxDO3jgd' },
         { name: '1604F Sched 4, 5 & 6', id: '1TT5ke0C09xA-3cl5b_gbt1MS3S0DNwik' },
       ],
@@ -44,7 +44,7 @@ const withholdingTaxTemplate = {
   files: [
     { name: 'BIR Form 2307', id: '1PCJgkZ5GIvPNUNx7Vw0LPWj_lpdIK5gv' },
     { name: 'BIR Form 2306', id: '1z3aLQ-RCvZTNyD5BaxV1OTXtqAhPsXRu' },
-    { name: 'BIR Form 2316', id: null },
+    { name: 'BIR Form 2316', id: '1-xI2hkV0Pzm_ook01JJDMCzIw18vbjsN' },
   ],
 };
 
