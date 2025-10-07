@@ -4,6 +4,7 @@
 import type { PdfResult } from './pdf/types';
 import { generate2307Pdf } from './pdf/2307';
 import { generate2306Pdf } from './pdf/2306';
+import { generate2316Pdf } from './pdf/2316';
 
 
 export async function generatePdf(formData: FormData): Promise<PdfResult> {
@@ -15,8 +16,8 @@ export async function generatePdf(formData: FormData): Promise<PdfResult> {
                 return await generate2307Pdf(formData);
             case "Final Tax Withheld at Source (BIR Form 2306)":
                 return await generate2306Pdf(formData);
-            // case "Compensation Payment/Tax Withheld (BIR Form 2316)":
-            //     return await generate2316Pdf(formData);
+            case "Compensation Payment/Tax Withheld (BIR Form 2316)":
+                return await generate2316Pdf(formData);
             default:
                 return { success: false, error: `Certificate type "${certificateType}" is not yet supported.` };
         }

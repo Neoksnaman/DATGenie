@@ -23,7 +23,7 @@ function splitTIN(tin: string): { tin1: string; tin2: string; tin3: string; } {
 
 function formatCurrency(value: any): string {
     const num = parseFloat(String(value || '0').replace(/,/g, ''));
-    if (isNaN(num) || num === 0) return '';
+    if (isNaN(num)) return '';
     return num.toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,

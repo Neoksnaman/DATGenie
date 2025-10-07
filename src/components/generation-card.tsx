@@ -66,9 +66,7 @@ const certificateTypes = [
     "Compensation Payment/Tax Withheld (BIR Form 2316)",
 ];
 
-const disabledCertificateTypes = [
-    "Compensation Payment/Tax Withheld (BIR Form 2316)",
-];
+const disabledCertificateTypes: string[] = [];
 
 
 const currentYear = new Date().getFullYear();
@@ -159,6 +157,9 @@ export function GenerationCard({
     } else if (certificateType === certificateTypes[1]) { // 2306
       setSignatureX(110);
       setSignatureY(380);
+    } else if (certificateType === certificateTypes[2]) { // 2316
+      setSignatureX(150);
+      setSignatureY(160);
     }
   }, [certificateType]);
 
@@ -581,5 +582,7 @@ export function GenerationCard({
     </Card>
   );
 }
+
+    
 
     
