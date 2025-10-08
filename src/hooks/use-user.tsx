@@ -29,7 +29,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
         // This handles cases where the cookie is invalid.
         // The middleware should also catch this, but this is a failsafe.
-        if (pathname !== '/login') {
+        if (!['/login', '/signup', '/forgot-password', '/reset-password', '/verify'].some(p => pathname.startsWith(p)) && pathname !== '/') {
             router.push('/login');
         }
       }
@@ -42,14 +42,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, [router, pathname]);
 
   useEffect(() => {
-    const isAuthPage = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify'].some(p => pathname.startsWith(p));
-    if (!isAuthPage) {
-        fetchUser();
-    } else {
-        setIsLoading(false);
-    }
+    // We fetch user on all pages now, to correctly handle redirects
+    // from welcome/auth pages to the dashboard if a valid session exists.
+    fetchUser();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pathname]); // Re-fetch user when path changes to handle login/logout navigation
 
   const updateUser = (newUser: UserDetails) => {
     setUser(newUser);

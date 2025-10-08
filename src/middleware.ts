@@ -5,7 +5,6 @@ import type { NextRequest } from 'next/server'
 async function validateSession(token: string, requestUrl: string): Promise<boolean> {
     try {
         const url = new URL('/api/auth/session', requestUrl);
-        // Use a lightweight HEAD request for validation
         const response = await fetch(url, {
             method: 'HEAD',
             headers: {
@@ -19,28 +18,31 @@ async function validateSession(token: string, requestUrl: string): Promise<boole
     }
 }
 
-// This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
     const sessionToken = request.cookies.get('sessionToken')?.value;
     const { pathname } = request.nextUrl;
 
-    const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password' || pathname === '/reset-password';
+    const isAuthPage = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify'].some(p => pathname.startsWith(p));
+    const isWelcomePage = pathname === '/';
 
-    // If the user is on an auth page
-    if (isAuthPage) {
-        if (sessionToken && pathname !== '/reset-password') {
-            // Validate the token. If valid, redirect to home.
-            // Allow access to reset-password even if logged in.
+    // If the user is on an auth page or the welcome page
+    if (isAuthPage || isWelcomePage) {
+        if (sessionToken) {
+            // Validate the token. If valid, redirect them to the app.
             const isValid = await validateSession(sessionToken, request.url);
             if (isValid) {
-                return NextResponse.redirect(new URL('/home', request.url));
+                 // For logged-in users, root path and auth pages redirect to home
+                 if(isWelcomePage || isAuthPage) {
+                    return NextResponse.redirect(new URL('/home', request.url));
+                 }
+            } else {
+                // If token is invalid, clear it and let them stay on the public page
+                const response = NextResponse.next();
+                response.cookies.delete('sessionToken');
+                return response;
             }
-            // If token is invalid, clear it and let them stay on auth page
-            const response = NextResponse.next();
-            response.cookies.delete('sessionToken');
-            return response;
         }
-        // No token, or on reset-password page, allow access
+        // No token, allow access to public pages
         return NextResponse.next();
     }
 
@@ -66,6 +68,7 @@ export async function middleware(request: NextRequest) {
 // See "Matching Paths" below to learn more
 export const config = {
   matcher: [
+    '/', // Root welcome page
     '/home/:path*',
     '/profile/:path*',
     '/tax-profiles/:path*',
@@ -75,5 +78,6 @@ export const config = {
     '/signup',
     '/forgot-password',
     '/reset-password',
+    '/verify',
   ],
 }

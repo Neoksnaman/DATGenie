@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -99,3 +100,40 @@ body {
       @apply ring-2 ring-primary/50;
   }
 }
+
+@keyframes sparkle {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5) rotate(360deg);
+  }
+}
+
+.sparkle-text {
+  position: relative;
+  display: inline-block;
+}
+
+.sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: hsl(var(--primary) / 0.8);
+  border-radius: 50%;
+  opacity: 0;
+  animation: sparkle 1.5s infinite;
+  box-shadow: 0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary));
+}
+
+.sparkle:nth-child(1) { top: -20%; left: -10%; animation-delay: 0.2s; }
+.sparkle:nth-child(2) { top: -10%; left: 90%; animation-delay: 0.4s; }
+.sparkle:nth-child(3) { top: 50%; left: 110%; animation-delay: 0.6s; }
+.sparkle:nth-child(4) { top: 110%; left: 50%; animation-delay: 0.8s; }
+.sparkle:nth-child(5) { top: 70%; left: -15%; animation-delay: 1s; }

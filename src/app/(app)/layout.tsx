@@ -36,7 +36,7 @@ import { DatFilesProvider, useDatFiles } from '@/hooks/use-dat-files';
 import { logoutUser } from '@/lib/actions/auth';
 import { LoadingPage } from '@/components/loading-page';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { UserProvider, useUser } from '@/hooks/use-user';
+import { useUser } from '@/hooks/use-user';
 
 
 function SidebarNavigation() {
@@ -201,14 +201,14 @@ function AppLayoutContent({
   }
   
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen">
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader>
-             <div className="flex items-center ml-4 mr-6 space-x-2">
+             <Link href="/home" className="flex items-center ml-4 mr-6 space-x-2">
                 <Logo />
                 <span className="font-bold">DATGenie</span>
-              </div>
+              </Link>
           </SidebarHeader>
           <SidebarContent>
             <div className="flex flex-col justify-between h-full">
@@ -239,7 +239,6 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <UserProvider>
       <RefreshProvider>
         <TaxProfileProvider>
           <DatFilesProvider>
@@ -247,6 +246,5 @@ export default function AppLayout({
           </DatFilesProvider>
         </TaxProfileProvider>
       </RefreshProvider>
-    </UserProvider>
   )
 }

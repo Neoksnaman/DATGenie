@@ -12,7 +12,6 @@ import {
 import { Button } from './ui/button';
 import { AlertTriangle } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
-import { Card, CardContent, CardHeader } from './ui/card';
 
 interface ErrorSummaryDialogProps {
   isOpen: boolean;
@@ -42,15 +41,17 @@ export function ErrorSummaryDialog({
                 </div>
             </div>
         </DialogHeader>
-        <ScrollArea className="px-6 pb-6 flex-1 min-h-0">
-             <div className="space-y-2 font-mono text-sm pr-4">
-                {errors.map((error, index) => (
-                    <div key={index} className="p-3 rounded-md border bg-slate-50 text-slate-700 text-xs">
-                       {error}
-                    </div>
-                ))}
-            </div>
-        </ScrollArea>
+        <div className="flex-1 overflow-y-auto px-6 min-h-0">
+            <ScrollArea className="h-full pr-4">
+                 <div className="space-y-2 font-mono text-sm">
+                    {errors.map((error, index) => (
+                        <div key={index} className="p-3 rounded-md border bg-slate-50 text-slate-700 text-xs">
+                           {error}
+                        </div>
+                    ))}
+                </div>
+            </ScrollArea>
+        </div>
         <DialogFooter className="p-4 border-t shrink-0">
           <Button onClick={() => onOpenChange(false)}>
             Close
