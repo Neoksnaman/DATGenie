@@ -74,6 +74,7 @@ export const config = {
     '/tax-profiles/:path*',
     '/dat-files/:path*',
     '/template/:path*',
+    '/tools/:path*',
     '/login',
     '/signup',
     '/forgot-password',

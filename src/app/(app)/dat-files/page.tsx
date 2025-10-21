@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useTransition, useCallback, useMemo, useRef } from 'react';
@@ -428,37 +429,50 @@ function DatFilesContent() {
 
     const handleExcelDownload = () => {
         if (selectedFiles.length === 0) return;
-    
+
         const firstSelectedFile = selectedFiles[0];
         const { transactionType } = parseFileName(firstSelectedFile.name);
-    
+
         startExcelDownloadTransition(async () => {
             let result;
-            const fileIds = selectedFiles.map(f => f.id);
-            const fileNames = selectedFiles.map(f => f.name); // Pass names for sorting
-    
+            const fileNames = selectedFiles.map(f => f.name);
+
+            const contentResults = await Promise.all(selectedFiles.map(f => getDatFileContent(f.id)));
+            const failedToFetch = contentResults.some(res => !res.success);
+
+            if (failedToFetch) {
+                toast({
+                    title: "Excel Generation Failed",
+                    description: "Could not fetch content for all selected files. Please try again.",
+                    variant: "destructive"
+                });
+                return;
+            }
+
+            const datFileContents = contentResults.map(res => res.content!);
+
             if (transactionType.startsWith('SAWT')) {
                 const zip = new JSZip();
                 const failedFiles: string[] = [];
 
-                const excelPromises = selectedFiles.map(async (file) => {
-                    const contentResult = await getDatFileContent(file.id);
-                    if (contentResult.success && contentResult.content) {
-                        const excelResult = await generateSawtExcel(contentResult.content, file.name);
+                const excelPromises = selectedFiles.map(async (file, index) => {
+                    const content = datFileContents[index];
+                    if (content) {
+                        const excelResult = await generateSawtExcel(content, file.name);
                         if (excelResult.success && excelResult.base64 && excelResult.fileName) {
                             return { status: 'fulfilled', value: excelResult };
                         }
                     }
                     return { status: 'rejected', reason: file.name };
                 });
-
+                
                 const results = await Promise.all(excelPromises);
 
                 results.forEach(res => {
                     if (res.status === 'fulfilled' && res.value) {
                          zip.file(res.value.fileName!, res.value.base64!, { base64: true });
                     } else {
-                        failedFiles.push(res.reason);
+                        failedFiles.push(res.reason as string);
                     }
                 });
                 
@@ -490,21 +504,21 @@ function DatFilesContent() {
             }
 
             if (transactionType === 'Sales') {
-                result = await generateSalesExcel(fileIds, fileNames);
+                result = await generateSalesExcel(datFileContents, fileNames);
             } else if (transactionType === 'Purchases') {
-                result = await generatePurchasesExcel(fileIds, fileNames);
+                result = await generatePurchasesExcel(datFileContents, fileNames);
             } else if (transactionType === 'Importations') {
-                result = await generateImportationsExcel(fileIds, fileNames);
+                result = await generateImportationsExcel(datFileContents, fileNames);
             } else if (transactionType.includes('1601-EQ')) {
-                result = await generate1601EQExcel(fileIds, fileNames);
+                result = await generate1601EQExcel(datFileContents, fileNames);
             } else if (transactionType.includes('1601-FQ')) {
-                result = await generate1601FQExcel(fileIds, fileNames);
+                result = await generate1601FQExcel(datFileContents, fileNames);
             } else if (transactionType.includes('1604-E')) {
-                result = await generate1604EExcel(fileIds, fileNames, profiles);
+                result = await generate1604EExcel(datFileContents, fileNames, profiles);
             } else if (transactionType.includes('1604-F')) {
-                result = await generate1604FExcel(fileIds, fileNames, profiles);
+                result = await generate1604FExcel(datFileContents, fileNames, profiles);
             } else if (transactionType.includes('1604-C')) {
-                result = await generate1604CExcel(fileIds, fileNames, profiles);
+                result = await generate1604CExcel(datFileContents, fileNames, profiles);
             } else {
                 toast({
                     title: "Not Implemented",
@@ -513,7 +527,7 @@ function DatFilesContent() {
                 });
                 return;
             }
-    
+
             if (result.success && result.base64) {
                 const byteCharacters = atob(result.base64);
                 const byteNumbers = new Array(byteCharacters.length);
@@ -522,7 +536,7 @@ function DatFilesContent() {
                 }
                 const byteArray = new Uint8Array(byteNumbers);
                 const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    
+
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
@@ -531,7 +545,7 @@ function DatFilesContent() {
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-    
+
                 toast({
                     title: 'Excel Generated',
                     description: `Your file ${result.fileName} has been downloaded.`,

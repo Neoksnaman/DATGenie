@@ -13,13 +13,11 @@ interface ExcelResult {
     error?: string;
 }
 
-export async function generate1604EExcel(fileIds: string[], fileNames: string[], profiles: TaxProfile[]): Promise<ExcelResult> {
+export async function generate1604EExcel(datFileContents: string[], fileNames: string[], profiles: TaxProfile[]): Promise<ExcelResult> {
     try {
-        const fileContents = await Promise.all(fileIds.map(id => getDatFileContent(id)));
-
         const filesWithContent = fileNames.map((name, index) => ({
             name,
-            content: fileContents[index].content,
+            content: datFileContents[index],
         })).filter(f => f.content);
         
         if (filesWithContent.length === 0) {

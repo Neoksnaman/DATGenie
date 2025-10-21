@@ -40,6 +40,7 @@ const TEMPLATE_SPREADSHEET_ID = GOOGLE_SHEETS_DB_TEMPLATE_ID;
 const CREDENTIALS_SHEET_NAME = 'credentials';
 const PENDING_VERIFICATIONS_SHEET_NAME = 'PendingVerifications';
 const SESSIONS_SHEET_NAME = 'ActiveSessions';
+const API_KEYS_SHEET_NAME = 'ApiKeys';
 
 export async function createDatabaseSheet(userEmail: string, parentFolderId: string): Promise<string> {
     const oauth2Client = await getOAuth2Client();
@@ -802,7 +803,7 @@ export async function deleteAllOtherSessionsByToken(currentToken: string) {
 
     const deleteRequests = rows
         .map((row, index) => ({ row, index }))
-        .filter(({ row }) => row[emailIndex] === currentUserEmail && row[tokenIndex] !== currentToken)
+        .filter(({ row, index }) => index > 0 && row[emailIndex] === currentUserEmail && row[tokenIndex] !== currentToken)
         .map(({ index }) => ({
             deleteDimension: {
                 range: {
@@ -862,5 +863,86 @@ export async function deleteAllSessionsByEmail(email: string) {
             resource: { requests: deleteRequests },
         });
         console.log(`[Sessions] Deleted ${deleteRequests.length} session(s) for user ${email}`);
+    }
+}
+
+
+export async function getExhaustedApiKeys(): Promise<string[]> {
+    try {
+        const sheets = google.sheets({ version: 'v4', auth: await getOAuth2Client() });
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${API_KEYS_SHEET_NAME}!A:B`,
+            dateTimeRenderOption: 'FORMATTED_STRING',
+        });
+
+        const rows = response.data.values;
+        if (!rows || rows.length < 2) {
+            return [];
+        }
+
+        const header = rows[0];
+        const keyIndex = header.indexOf('value');
+        const statusIndex = header.indexOf('status');
+
+        if (keyIndex === -1 || statusIndex === -1) {
+            console.error('ApiKeys sheet must have "value" and "status" headers.');
+            return [];
+        }
+
+        const exhaustedKeys = rows
+            .slice(1)
+            .filter(row => row[statusIndex] === 'Exhausted')
+            .map(row => row[keyIndex]);
+        
+        return exhaustedKeys.filter(Boolean);
+
+    } catch (err) {
+        console.error('Error fetching exhausted API keys from Google Sheet: ' + err);
+        return [];
+    }
+}
+
+export async function markApiKeyAsExhausted(apiKey: string): Promise<void> {
+    try {
+        const sheets = google.sheets({ version: 'v4', auth: await getOAuth2Client() });
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${API_KEYS_SHEET_NAME}!A:A`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) return;
+
+        const keyRowIndex = rows.findIndex(row => row[0] === apiKey);
+        if (keyRowIndex === -1) {
+            console.warn(`[Sheets] API Key not found in ApiKeys sheet, cannot mark as exhausted: ${apiKey.slice(0, 8)}...`);
+            return;
+        }
+
+        const rowToUpdate = keyRowIndex + 1;
+        const timestamp = new Date().toISOString();
+
+        await sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            requestBody: {
+                valueInputOption: 'USER_ENTERED',
+                data: [
+                    {
+                        range: `${API_KEYS_SHEET_NAME}!B${rowToUpdate}`,
+                        values: [['Exhausted']],
+                    },
+                    {
+                        range: `${API_KEYS_SHEET_NAME}!C${rowToUpdate}`,
+                        values: [[timestamp]],
+                    }
+                ],
+            },
+        });
+        console.log(`[Sheets] Marked API Key ${apiKey.slice(0, 8)}... as exhausted.`);
+
+    } catch (err) {
+        // Log error but don't throw, as this is a background task
+        console.error(`[Sheets] Failed to mark API key as exhausted:`, err);
     }
 }

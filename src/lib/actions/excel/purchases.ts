@@ -12,13 +12,11 @@ interface ExcelResult {
     error?: string;
 }
 
-export async function generatePurchasesExcel(fileIds: string[], fileNames: string[]): Promise<ExcelResult> {
+export async function generatePurchasesExcel(datFileContents: string[], fileNames: string[]): Promise<ExcelResult> {
     try {
-        const fileContents = await Promise.all(fileIds.map(id => getDatFileContent(id)));
-
         const filesWithContent = fileNames.map((name, index) => ({
             name,
-            content: fileContents[index].content,
+            content: datFileContents[index],
         }));
         
         const getMonthFromFileName = (name: string) => {

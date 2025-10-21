@@ -13,13 +13,11 @@ interface ExcelResult {
     error?: string;
 }
 
-export async function generate1604CExcel(fileIds: string[], fileNames: string[], profiles: TaxProfile[]): Promise<ExcelResult> {
+export async function generate1604CExcel(datFileContents: string[], fileNames: string[], profiles: TaxProfile[]): Promise<ExcelResult> {
     try {
-        const fileContents = await Promise.all(fileIds.map(id => getDatFileContent(id)));
-
         const filesWithContent = fileNames.map((name, index) => ({
             name,
-            content: fileContents[index].content,
+            content: datFileContents[index],
         })).filter(f => f.content);
         
         if (filesWithContent.length === 0) {
@@ -65,7 +63,7 @@ export async function generate1604CExcel(fileIds: string[], fileNames: string[],
                 [null],
                 [`WITHHOLDING AGENT'S NAME: ${ownerName}`],
                 [null],
-                [null, null, "P   R   E   S   E   N   T     E   M   P   L   O   Y   E   R", null, null, null, null, null, null, null, null, null, null, null, null, null, null, "P   R   E   V   I   O   U   S     E   M   P   L   O   Y   E   R", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+                [null, null, "P   R   E   S   E   N   T     E   M   P   L   O   Y   E   R", null, null, null, null, null, null, null, null, null, null, null, null, null, null, "P   R   E   V   I   O   U   S     E   M   P   L   O   Y   E   R", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
                 [null, null, null, null, null, null, null, null, "N  O  N    -   T  A  X  A  B  L  E", null, null, null, null, "T  A  X  A  B  L  E", null, null, null, null, null, null, null, null, null, "N  O  N    -   T  A  X  A  B  L  E", null, null, null, null, "T  A  X  A  B  L  E", null, null, "TOTAL TAXABLE", "TOTAL TAXABLE", null, "TAX WITHHELD", null, null, "Y E A R - E N D   A D J U S T M E N T (16a or 16b)", null, null, null],
                 ["SEQ", "NAME OF EMPLOYEES", "NATIONALITY/", "CURRENT EMPLOYMENT", "PERIOD OF", null, "REASON OF", "GROSS", "13th MONTH PAY", "DE MINIMIS", "SSS, GSIS, PHIC &", "SALARIES (P250K & below) &", "TOTAL", "BASIC SALARY", "13th MONTH PAY", "SALARIES & OTHER", "TOTAL TAXABLE", "TAXPAYER", "EMPLOYMENT", "PERIOD OF", null, "REASON OF", "GROSS", "13th MONTH PAY", "DE MINIMIS", "SSS, GSIS, PHIC &", "SALARIES (P250K & below) &", "TOTAL NON-TAXABLE/", "BASIC SALARY", "13th MONTH PAY", "SALARIES & OTHER", "COMPENSATION", "COMPENSATION INCOME", "TAX DUE", "(Jan. - Nov.)", null, "5% Tax Credit", "AMT WITHHELD AND PAID FOR IN DECEMBER OR LAST SALARY", "OVER", "AMOUNT OF TAX", "SUBSTITUTED FILING"],
                 ["NO", "(Last Name, First Name, Middle Name)", "RESIDENT", "STATUS (*)", "EMPLOYMENT", null, "SEPARATION (**)", "COMPENSATION", "& OTHER BENEFITS", "BENEFITS", "PAG-IBIG CONTRIBUTIONS", "OTHER FORMS OF", "NON-TAXABLE/EXEMPT", "(Net of SSS,GSIS,PHIC,", "& OTHER BENEFITS", "FORMS OF", "COMPENSATION INCOME", "IDENTIFICATION", "STATUS (*)", "EMPLOYMENT", null, "SEPARATION, if applicable (**)", "COMPENSATION", "& OTHER BENEFITS", "BENEFITS", "PAG-IBIG CONTRIBUTIONS", "OTHER FORMS OF", "EXEMPT COMPENSATION(Previous Employer)", "(Net of SSS,GSIS,PHIC,", "& OTHER BENEFITS", "FORMS OF", "(previous employer)", "(Present and", "(Jan. - Dec.)", "PREVIOUS EMPLOYER", "PRESENT EMPLOYER", "(PERA Act of 2008)", "& PAID FOR IN", "WITHHELD TAX", "WITHHELD AS", "YES/NO"],

@@ -2,15 +2,21 @@
 'use server';
 
 /**
- * @fileOverview Analyzes an Excel file for potential errors and inconsistencies using AI.
+ * @fileOverview Extracts and validates data from an invoice using AI.
  *
- * - excelErrorDetection - A function that handles the Excel file analysis process.
+ * - extractInvoiceData
+ *   A function that handles the invoice analysis process.
  */
 import { genkit, type GenkitError } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import type { ExcelErrorDetectionInput } from '@/ai/schemas';
-import { ExcelErrorDetectionInputSchema, ExcelErrorDetectionOutputSchema } from '@/ai/schemas';
-import type { ExcelErrorDetectionOutput } from '@/ai/schemas';
+import {
+  ExtractInvoiceDataInputSchema,
+  ExtractInvoiceDataOutputSchema,
+} from '@/ai/schemas';
+import type {
+  ExtractInvoiceDataInput,
+  ExtractInvoiceDataOutput,
+} from '@/ai/schemas';
 import { getExhaustedApiKeys, markApiKeyAsExhausted } from '@/lib/googlesheets';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -43,14 +49,14 @@ function logToBrowser(message: string) {
 }
 
 /**
- * 🔁 Public function — entry point for detecting excel errors
+ * 🔁 Public function — entry point for extracting invoice data
  * This function now contains the full round-robin and fallback logic.
  */
-export async function excelErrorDetection(
-  input: ExcelErrorDetectionInput,
+export async function extractInvoiceData(
+  input: ExtractInvoiceDataInput,
   pageIndex: number = 0
-): Promise<ExcelErrorDetectionOutput> {
-  const context = 'excelErrorDetectionFlow';
+): Promise<ExtractInvoiceDataOutput> {
+  const context = 'invoiceReaderFlow';
   let lastError: any;
 
   // 1. Fetch exhausted keys from Google Sheet
@@ -85,25 +91,33 @@ export async function excelErrorDetection(
 
         // 5. Define the prompt on this instance.
         const prompt = instance.definePrompt({
-          name: 'excelErrorDetectionPrompt',
+          name: 'extractInvoiceDataPrompt',
           model, // Pass the current model from the loop.
-          input: { schema: ExcelErrorDetectionInputSchema },
-          output: { schema: ExcelErrorDetectionOutputSchema },
-          prompt: `You are an AI assistant that analyzes Excel files for potential errors and inconsistencies.
+          input: { schema: ExtractInvoiceDataInputSchema },
+          output: { schema: ExtractInvoiceDataOutputSchema },
+          prompt: `
+            You are an expert AI assistant specializing in extracting data from invoices.
+            Your task is to extract the following information from the provided invoice image or PDF.
 
-You will receive the Excel file data as a data URI.
+            - Registered Name: The legal name of the entity that issued the invoice. This is often the trade name.
+            - Sole Proprietor Name: The name of the sole proprietor, if present. This name is often found near the trade name, sometimes followed by '- Prop' or '- Proprietor'. If not found, return an empty string.
+            - TIN: The Tax Identification Number of the issuing entity.
+            - Address: The business address of the issuing entity.
+            - Invoice Number: The unique identifier for the invoice.
+            - Invoice Date: The date of the invoice. If no date is found, return "N/A".
+            - VATable Amount: The amount subject to VAT (Value Added Tax).
+            - VAT Amount: The actual VAT amount charged.
+            - VAT-exempt: The total amount of sales that are exempt from VAT.
+            - Zero-rated: The total amount of sales that have a 0% VAT rate.
+            - Total Amount: The final, total amount on the invoice.
+            - Full Text: The entire text content of the document.
 
-Analyze the Excel data and identify any potential errors, inconsistencies, or formatting issues that might cause problems during conversion to .DAT or PDF formats.
+            Extract the values as they appear on the document. Do not perform any calculations or corrections.
+            If a field is not present, return an empty string.
 
-Provide a list of errors and a list of suggestions to fix them.
-
-Excel Data: {{media url=excelDataUri}}
-
-Errors:
-{{errors}}
-
-Suggestions:
-{{suggestions}}`,
+            Here is the invoice data:
+            {{media url=invoiceDataUri}}
+            `,
         });
 
         // 6. Execute the prompt and return the result on success.

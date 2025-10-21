@@ -14,13 +14,11 @@ interface ExcelResult {
 }
 
 
-export async function generate1601EQExcel(fileIds: string[], fileNames: string[]): Promise<ExcelResult> {
+export async function generate1601EQExcel(datFileContents: string[], fileNames: string[]): Promise<ExcelResult> {
     try {
-        const fileContents = await Promise.all(fileIds.map(id => getDatFileContent(id)));
-
         const filesWithContent = fileNames.map((name, index) => ({
             name,
-            content: fileContents[index].content,
+            content: datFileContents[index],
             month: parseInt(name.substring(13, 15), 10),
         })).filter(f => f.content);
         
