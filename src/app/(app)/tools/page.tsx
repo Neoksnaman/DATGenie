@@ -5,7 +5,7 @@ import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UploadCloud, File as FileIcon, X, Loader2, Wand2, Scan, Copy, Download, FileText, Split, Trash2 } from 'lucide-react';
+import { UploadCloud, File as FileIcon, X, Loader2, Wand2, Scan, Copy, Download, Split, Trash2, StopCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { extractInvoiceData } from '@/lib/actions/ai';
@@ -388,12 +388,7 @@ function ToolsPageContent() {
     const [progressText, setProgressText] = useState('');
     const { toast } = useToast();
     const stopGenerationRef = useRef(false);
-    const { setRefreshFunction } = useRefresh();
     
-    useEffect(() => {
-        setRefreshFunction(null);
-    }, [setRefreshFunction]);
-
     const handleFileSelect = (file: File) => {
         setSelectedFile(file);
         setAnalysisResults([]);
@@ -584,5 +579,13 @@ function ToolsPageContent() {
 }
 
 export default function ToolsPage() {
+    const { setRefreshFunction } = useRefresh();
+
+    useEffect(() => {
+        setRefreshFunction(null);
+    }, [setRefreshFunction]);
+    
     return <ToolsPageContent />;
 }
+
+    
