@@ -5,7 +5,7 @@ import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UploadCloud, File as FileIcon, X, Loader2, Wand2, Scan, Copy, Download, FileText, Square, StopCircle, HardDriveUpload, Split, Trash2 } from 'lucide-react';
+import { UploadCloud, File as FileIcon, X, Loader2, Wand2, Scan, Copy, Download, FileText, Split, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { extractInvoiceData } from '@/lib/actions/ai';
@@ -222,7 +222,6 @@ function splitAddress(address: string): { line1: string; line2: string } {
     }
 
     let splitPos = -1;
-    // Find the last space or comma at or before the 30th character
     for (let i = 30; i >= 0; i--) {
         if (address[i] === ' ' || address[i] === ',') {
             splitPos = i;
@@ -230,7 +229,6 @@ function splitAddress(address: string): { line1: string; line2: string } {
         }
     }
 
-    // If no natural break point is found, force the split at 30
     if (splitPos === -1) {
         splitPos = 30;
     }
@@ -259,10 +257,8 @@ function AddressSplitterCard() {
                 
                 const sanitizedAddress = sanitizeAndValidateString(originalAddress, "Address", 200, false).value;
 
-                // First pass split
                 let { line1, line2 } = splitAddress(sanitizedAddress);
 
-                // If line2 is still too long, abbreviate the *full* sanitized address and re-split
                 if (line2.length > 30) {
                     const abbreviatedAddress = abbreviateAddress(sanitizedAddress);
                     const resplitResult = splitAddress(abbreviatedAddress);
@@ -384,8 +380,7 @@ function AddressSplitterCard() {
     );
 }
 
-
-export default function ToolsPage() {
+function ToolsPageContent() {
     const [isAnalyzing, startAnalyzingTransition] = useTransition();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [analysisResults, setAnalysisResults] = useState<ExtractInvoiceDataOutput[]>([]);
@@ -586,4 +581,8 @@ export default function ToolsPage() {
             <DatFileProcessorCard />
         </div>
     );
+}
+
+export default function ToolsPage() {
+    return <ToolsPageContent />;
 }
