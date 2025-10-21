@@ -17,6 +17,7 @@ import * as xlsx from 'xlsx';
 import { DatFileProcessorCard } from '@/components/dat-file-processor-card';
 import { Textarea } from '@/components/ui/textarea';
 import { sanitizeAndValidateString } from '@/lib/dat-utils';
+import { useRefresh } from '@/hooks/use-refresh';
 
 function InvoiceUploader({ onFileSelect, clearFile, selectedFile, isAnalyzing }: { onFileSelect: (file: File) => void, clearFile: () => void, selectedFile: File | null, isAnalyzing: boolean }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -392,10 +393,11 @@ export default function ToolsPage() {
     const [progressText, setProgressText] = useState('');
     const { toast } = useToast();
     const stopGenerationRef = useRef(false);
+    const { setRefreshFunction } = useRefresh();
     
     useEffect(() => {
-        // This is a placeholder for when we have refresh logic for this page.
-    }, []);
+        setRefreshFunction(null);
+    }, [setRefreshFunction]);
 
     const handleFileSelect = (file: File) => {
         setSelectedFile(file);
@@ -585,14 +587,3 @@ export default function ToolsPage() {
         </div>
     );
 }
-
-    
-
-    
-
-
-
-
-    
-
-    
