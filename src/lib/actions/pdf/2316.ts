@@ -219,11 +219,12 @@ export async function generate2316Pdf(formData: FormData): Promise<PdfResult> {
             
             rowData.employeeLastName = sanitizeAndValidateString(rowData.employeeLastName, 'employee lastName', 30, true, errorPrefix).value;
             rowData.employeeFirstName = sanitizeAndValidateString(rowData.employeeFirstName, 'employee firstName', 30, true, errorPrefix).value;
-            rowData.employeeAddress = sanitizeAndValidateString(rowData.employeeAddress, 'employee address', 100, true, errorPrefix).value;
+            rowData.employeeAddress = sanitizeAndValidateString(rowData.employeeAddress, 'employee address', 100, false, errorPrefix).value;
             
             const zip = String(rowData['employeeZipCode'] || '');
-            if(!zip) validationErrors.push(`${errorPrefix}: employee zipCode is required.`);
-            else if (!/^\d{4}$/.test(zip)) validationErrors.push(`${errorPrefix}: employee zipCode must be 4 digits.`);
+            if(zip && !/^\d{4}$/.test(zip)) {
+                validationErrors.push(`${errorPrefix}: employee zipCode must be 4 digits if provided.`);
+            }
 
             const dateRegex = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12]\d|3[01])\/\d{4}$/;
             if (!dateRegex.test(rowData['employment_from'])) validationErrors.push(`${errorPrefix}: employment_from format is invalid. Use MM/DD/YYYY.`);

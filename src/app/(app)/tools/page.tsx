@@ -217,20 +217,23 @@ function abbreviateAddress(address: string): string {
 }
 
 function splitAddress(address: string): { line1: string; line2: string } {
-    if (address.length <= 30) {
-        return { line1: address, line2: '' };
-    }
-
     let splitPos = -1;
-    for (let i = 30; i >= 0; i--) {
+
+    // Prioritize splitting at the last space/comma before the 30-char mark for line 1
+    const idealSplitPoint = Math.min(30, address.length - 1);
+    for (let i = idealSplitPoint; i >= 0; i--) {
         if (address[i] === ' ' || address[i] === ',') {
             splitPos = i;
             break;
         }
     }
-
+    
+    // If no good split point is found before 30 chars, find the last space in the whole string
     if (splitPos === -1) {
-        splitPos = 30;
+        splitPos = address.lastIndexOf(' ');
+         if (splitPos === -1) { // If there are no spaces at all
+             splitPos = Math.floor(address.length / 2);
+         }
     }
 
     const line1 = address.substring(0, splitPos).trim();
@@ -291,14 +294,20 @@ function AddressSplitterCard() {
         toast({ title: "Download Started", description: "Your Excel file is being downloaded."});
     };
     
+    const handleCopyAll = () => {
+        if (splitResults.length === 0) return;
+
+        const textToCopy = splitResults
+            .map(item => `${item.line1}\t${item.line2}`)
+            .join('\n');
+
+        navigator.clipboard.writeText(textToCopy);
+        toast({ title: "Copied!", description: `Copied ${splitResults.length} addresses to clipboard.`});
+    }
+
     const handleClear = () => {
         setAddressList('');
         setSplitResults([]);
-    };
-
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-        toast({ title: "Copied!", description: "Address line copied to clipboard."});
     };
 
     return (
@@ -332,6 +341,10 @@ function AddressSplitterCard() {
                         <div className="flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Results ({splitResults.length})</h3>
                             <div className="flex items-center gap-2">
+                                <Button onClick={handleCopyAll} variant="outline" size="sm">
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    Copy All
+                                </Button>
                                 <Button onClick={handleDownload} variant="outline" size="sm">
                                     <Download className="mr-2 h-4 w-4" />
                                     Download as Excel
@@ -358,13 +371,11 @@ function AddressSplitterCard() {
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <span className="flex-1 text-sm font-mono">{item.line1}</span>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(item.line1)}><Copy className="h-3 w-3" /></Button>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
                                                  <div className="flex items-center gap-2">
                                                     <span className="flex-1 text-sm font-mono">{item.line2}</span>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(item.line2)}><Copy className="h-3 w-3" /></Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
