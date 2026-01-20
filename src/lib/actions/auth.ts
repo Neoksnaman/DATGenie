@@ -90,6 +90,17 @@ export async function verifyUserAccount(token: string): Promise<{ success: boole
             return { success: false, error: 'This verification link has expired. Please sign up again.' };
         }
         
+        const allUsers = await getAllUsers();
+        const userExists = allUsers.some(user => user.emailAddress.toLowerCase() === pendingUser.email.toLowerCase());
+
+        if (userExists) {
+            console.log(`[Verification] User ${pendingUser.email} already exists. Skipping duplicate creation.`);
+            deletePendingUserByRow(rowIndex).catch(err => {
+                 console.error(`[Background] Failed to delete already-verified pending user at row ${rowIndex}:`, err);
+            });
+            return { success: true };
+        }
+        
         const folderId = await createFolderInDrive(pendingUser.email);
         const databaseId = await createDatabaseSheet(pendingUser.email, folderId);
         
