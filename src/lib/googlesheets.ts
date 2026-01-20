@@ -491,10 +491,11 @@ interface PendingUser {
     token: string;
     type: string;
     expires: string;
+    status?: string;
 }
 
 
-export async function addPendingUser(user: PendingUser) {
+export async function addPendingUser(user: Omit<PendingUser, 'status'>) {
     const sheets = google.sheets({ version: 'v4', auth: await getOAuth2Client() });
     const sheetName = PENDING_VERIFICATIONS_SHEET_NAME;
 
@@ -506,7 +507,7 @@ export async function addPendingUser(user: PendingUser) {
     const rows = getResponse.data.values || [];
     const existingRowIndex = rows.findIndex(row => row[0] === user.email);
 
-    const values = [[user.email, user.userName || '', user.password || '', user.token, user.type, user.expires]];
+    const values = [[user.email, user.userName || '', user.password || '', user.token, user.type, user.expires, 'Pending']];
 
     if (existingRowIndex !== -1) {
         const rowToUpdate = existingRowIndex + 1;
@@ -514,7 +515,7 @@ export async function addPendingUser(user: PendingUser) {
         
         await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${sheetName}!A${rowToUpdate}:F${rowToUpdate}`,
+            range: `${sheetName}!A${rowToUpdate}:G${rowToUpdate}`,
             valueInputOption: 'USER_ENTERED',
             resource: { values },
         });
@@ -541,11 +542,16 @@ export async function getPendingUserByToken(token: string): Promise<{ user: Pend
     const header = rows[0];
     const tokenIndex = header.indexOf('token');
     
+    if (tokenIndex === -1) {
+      throw new Error('Could not find "token" column in PendingVerifications sheet.');
+    }
+
     const rowIndex = rows.findIndex((row, index) => index > 0 && row[tokenIndex] === token);
 
     if (rowIndex === -1) return null;
     
     const userRow = rows[rowIndex];
+    const statusIndex = header.indexOf('status');
 
     const user: PendingUser = {
         email: userRow[header.indexOf('emailAddress')],
@@ -554,6 +560,7 @@ export async function getPendingUserByToken(token: string): Promise<{ user: Pend
         token: userRow[tokenIndex],
         type: userRow[header.indexOf('type')],
         expires: userRow[header.indexOf('expiration')],
+        status: statusIndex !== -1 ? userRow[statusIndex] : 'Pending',
     };
 
     return { user, rowIndex };
@@ -575,6 +582,40 @@ export async function deletePendingUserByRow(rowIndex: number) {
             }],
         },
     });
+}
+
+export async function updatePendingUserStatus(rowIndex: number, status: string) {
+    const sheets = google.sheets({ version: 'v4', auth: await getOAuth2Client() });
+    const sheetName = PENDING_VERIFICATIONS_SHEET_NAME;
+
+    // Dynamically find the 'status' column
+    const headerResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${sheetName}!1:1`,
+    });
+
+    const headers = headerResponse.data.values?.[0];
+    if (!headers) {
+        throw new Error(`Could not retrieve headers from ${sheetName} sheet.`);
+    }
+
+    const statusColumnIndex = headers.indexOf('status');
+    if (statusColumnIndex === -1) {
+        throw new Error(`The '${sheetName}' sheet must have a 'status' column for the verification process to work correctly.`);
+    }
+    
+    const columnLetter = String.fromCharCode('A'.charCodeAt(0) + statusColumnIndex);
+    const range = `${sheetName}!${columnLetter}${rowIndex + 1}`;
+
+    await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range,
+        valueInputOption: 'RAW',
+        resource: {
+            values: [[status]],
+        },
+    });
+    console.log(`[Sheets] Updated status to '${status}' for row ${rowIndex + 1}.`);
 }
 
 

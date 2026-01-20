@@ -17,6 +17,7 @@ import {
     updateUserDatabaseId,
     updateUserPasswordByEmail,
     deleteAllSessionsByEmail,
+    updatePendingUserStatus,
 } from '../googlesheets';
 import { createFolderInDrive } from '../drive';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../email';
@@ -74,30 +75,46 @@ export async function signUpUser(userData: SignupData, origin: string): Promise<
 
 export async function verifyUserAccount(token: string): Promise<{ success: boolean; error?: string; }> {
     try {
-        const result = await getPendingUserByToken(token);
+        // Find the pending verification request.
+        const initialResult = await getPendingUserByToken(token);
 
-        if (!result) {
-            return { success: false, error: 'This verification link is invalid or has expired.' };
+        if (!initialResult || initialResult.user.status !== 'Pending') {
+            // Check if the user was already verified. If so, this is not an error.
+            const userExists = initialResult && await getAllUsers().then(users => users.some(u => u.emailAddress === initialResult.user.email));
+            if (userExists) return { success: true }; // Already verified, silently succeed.
+            return { success: false, error: 'This verification link is invalid or has already been used.' };
         }
         
-        const { user: pendingUser, rowIndex } = result;
+        const { user: pendingUser, rowIndex } = initialResult;
 
         if (new Date(pendingUser.expires) < new Date()) {
-            // Fire and forget deletion, no need to wait
-            deletePendingUserByRow(rowIndex).catch(err => {
-                console.error(`[Background] Failed to delete expired pending user at row ${rowIndex}:`, err);
-            });
+            deletePendingUserByRow(rowIndex).catch(err => console.error(`[Background] Failed to delete expired pending user at row ${rowIndex}:`, err));
             return { success: false, error: 'This verification link has expired. Please sign up again.' };
         }
+
+        // --- Claim-and-Verify ---
+        const claimId = `claiming_${randomUUID()}`;
+        
+        // 1. Attempt to claim the row by updating its status
+        await updatePendingUserStatus(rowIndex, claimId);
+
+        // 2. Immediately read back to verify the claim
+        const verificationResult = await getPendingUserByToken(token);
+
+        // 3. Check if we won the race. If the status isn't our claimId, another process won.
+        if (!verificationResult || verificationResult.user.status !== claimId) {
+            console.log('[Verification] Race condition detected. Another process claimed the token. Aborting.');
+            return { success: true }; // Return success to user, but do nothing.
+        }
+
+        // --- We are the winner. Proceed safely. ---
         
         const allUsers = await getAllUsers();
         const userExists = allUsers.some(user => user.emailAddress.toLowerCase() === pendingUser.email.toLowerCase());
 
         if (userExists) {
             console.log(`[Verification] User ${pendingUser.email} already exists. Skipping duplicate creation.`);
-            deletePendingUserByRow(rowIndex).catch(err => {
-                 console.error(`[Background] Failed to delete already-verified pending user at row ${rowIndex}:`, err);
-            });
+            deletePendingUserByRow(rowIndex).catch(err => console.error(`[Background] Failed to delete already-verified pending user at row ${rowIndex}:`, err));
             return { success: true };
         }
         
@@ -112,10 +129,8 @@ export async function verifyUserAccount(token: string): Promise<{ success: boole
             databaseId: databaseId
         });
 
-        // Fire-and-forget the cleanup operation.
-        deletePendingUserByRow(rowIndex).catch(err => {
-             console.error(`[Background] Failed to delete verified pending user at row ${rowIndex}:`, err);
-        });
+        // Final cleanup.
+        deletePendingUserByRow(rowIndex).catch(err => console.error(`[Background] Failed to delete verified pending user at row ${rowIndex}:`, err));
 
         return { success: true };
 
