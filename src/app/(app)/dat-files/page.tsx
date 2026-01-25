@@ -21,6 +21,7 @@ import JSZip from 'jszip';
 import { generateSalesExcel, generatePurchasesExcel, generate1601EQExcel, generate1601FQExcel, generateSawtExcel, generateImportationsExcel, generate1604EExcel, generate1604FExcel, generate1604CExcel } from '@/lib/actions/excel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTaxProfiles } from '@/hooks/use-tax-profiles';
+import { parseFileName } from '@/lib/dat-utils';
 
 
 function DatFilesContent() {
@@ -82,86 +83,6 @@ function DatFilesContent() {
         setCurrentPage(1);
     }, [searchQuery, selectedFiles, tinFilter, typeFilter, yearFilter]);
     
-    const parseFileName = useCallback((fileName: string) => {
-        const tinLength = 9;
-        const branchCodeLength = 4;
-        const tinAndBranchLength = tinLength + branchCodeLength;
-        const sawtSchedules = ["1700", "1702", "2550Q", "1701", "1702Q", "2551M", "1701Q", "2550M", "2553"];
-
-        const tin = fileName.substring(0, tinLength);
-
-        if (fileName.includes('1601EQ')) {
-            const monthIndex = tinAndBranchLength;
-            const yearIndex = monthIndex + 2;
-            const month = fileName.substring(monthIndex, yearIndex);
-            const year = fileName.substring(yearIndex, yearIndex + 4);
-            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-            return { transactionType: '1601-EQ', reportingPeriod, year, month, tin };
-        }
-        
-        if (fileName.includes('1601FQ')) {
-            const monthIndex = tinAndBranchLength;
-            const yearIndex = monthIndex + 2;
-            const month = fileName.substring(monthIndex, yearIndex);
-            const year = fileName.substring(yearIndex, yearIndex + 4);
-            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-            return { transactionType: '1601-FQ', reportingPeriod, year, month, tin };
-        }
-        
-        if (fileName.includes('1604F')) {
-            const dateStartIndex = tinAndBranchLength;
-            const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
-            const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
-            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
-            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
-            return { transactionType: '1604-F', reportingPeriod, year, month, tin };
-        }
-
-        if (fileName.includes('1604E')) {
-            const dateStartIndex = tinAndBranchLength;
-            const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
-            const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
-            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
-            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
-            return { transactionType: '1604-E', reportingPeriod, year, month, tin };
-        }
-
-        if (fileName.includes('1604C')) {
-            const dateStartIndex = tinAndBranchLength;
-            const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
-            const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
-            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
-            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
-            return { transactionType: '1604-C', reportingPeriod, year, month, tin };
-        }
-
-        const sortedSawtSchedules = sawtSchedules.sort((a, b) => b.length - a.length);
-        const sawtScheduleMatch = sortedSawtSchedules.find(schedule => fileName.includes(schedule));
-
-        if (sawtScheduleMatch) {
-            const monthIndex = tinAndBranchLength;
-            const yearIndex = monthIndex + 2;
-            const month = fileName.substring(monthIndex, yearIndex);
-            const year = fileName.substring(yearIndex, yearIndex + 4);
-            const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-            return { transactionType: `SAWT-${sawtScheduleMatch}`, reportingPeriod, year, month, tin };
-        }
-        
-        const typeCode = fileName.charAt(9);
-        const month = fileName.substring(10, 12);
-        const year = fileName.substring(12, 16);
-
-        let transactionType = 'Unknown';
-        switch (typeCode) {
-            case 'S': transactionType = 'Sales'; break;
-            case 'P': transactionType = 'Purchases'; break;
-            case 'I': transactionType = 'Importations'; break;
-        }
-
-        const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-
-        return { transactionType, reportingPeriod, year, month, tin };
-    }, []);
     
     const { availableTins, availableTypes, availableYears } = useMemo(() => {
         const getOptions = (filterKey: 'tin' | 'transactionType' | 'year') => {
@@ -190,7 +111,7 @@ function DatFilesContent() {
             availableTypes: getOptions('transactionType'),
             availableYears: getOptions('year').sort((a, b) => b.localeCompare(a)),
         };
-    }, [files, parseFileName, tinFilter, typeFilter, yearFilter]);
+    }, [files, tinFilter, typeFilter, yearFilter]);
 
 
     const handleViewFile = (file: DatFile) => {
@@ -598,13 +519,6 @@ function DatFilesContent() {
         });
     };
     
-    const getQuarter = (month: number) => {
-        if (month >= 1 && month <= 3) return 1;
-        if (month >= 4 && month <= 6) return 2;
-        if (month >= 7 && month <= 9) return 3;
-        if (month >= 10 && month <= 12) return 4;
-        return 0;
-    }
 
     const filteredFiles = files
         .filter(file => {
@@ -636,9 +550,7 @@ function DatFilesContent() {
             }
 
             if (selectedFileInfo.transactionType.includes('1601-EQ') || selectedFileInfo.transactionType.includes('1601-FQ')) {
-                const selectedQuarter = getQuarter(parseInt(selectedFileInfo.month!, 10));
-                const currentQuarter = getQuarter(parseInt(currentFileInfo.month!, 10));
-                return selectedQuarter === currentQuarter;
+                return selectedFileInfo.quarter === currentFileInfo.quarter;
             }
             
             return true;

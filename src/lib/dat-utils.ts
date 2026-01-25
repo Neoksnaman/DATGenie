@@ -99,3 +99,70 @@ export const quoteIfNotEmpty = (value: string | undefined | null) => {
   const str = String(value || '').trim();
   return str ? `"${str}"` : '';
 };
+
+export function parseFileName(fileName: string) {
+    const tinLength = 9;
+    const branchCodeLength = 4;
+    const tinAndBranchLength = tinLength + branchCodeLength;
+    const tin = fileName.substring(0, tinLength);
+    const getQuarter = (month: number) => Math.ceil(month / 3);
+
+    // --- VAT Relief Check (Priority 1) ---
+    // These files have a unique structure with a letter at index 9.
+    const typeCode = fileName.charAt(9);
+    if (typeCode === 'S' || typeCode === 'P' || typeCode === 'I') {
+        const month = fileName.substring(10, 12);
+        const year = fileName.substring(12, 16);
+        let transactionType = 'Unknown';
+        switch (typeCode) {
+            case 'S': transactionType = 'Sales'; break;
+            case 'P': transactionType = 'Purchases'; break;
+            case 'I': transactionType = 'Importations'; break;
+        }
+        const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+        const quarter = getQuarter(parseInt(month, 10));
+        return { transactionType, reportingPeriod, year, month, tin, quarter };
+    }
+
+    // --- Alphalist & SAWT Checks (Priority 2) ---
+    // These files have numbers at index 9 (part of the branch code).
+    
+    if (fileName.includes('1601EQ') || fileName.includes('1601FQ')) {
+        const type = fileName.includes('1601EQ') ? '1601-EQ' : '1601-FQ';
+        const monthIndex = tinAndBranchLength;
+        const yearIndex = monthIndex + 2;
+        const month = fileName.substring(monthIndex, yearIndex);
+        const year = fileName.substring(yearIndex, yearIndex + 4);
+        const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+        const quarter = getQuarter(parseInt(month, 10));
+        return { transactionType: type, reportingPeriod, year, month, tin, quarter };
+    }
+
+    if (fileName.includes('1604F') || fileName.includes('1604E') || fileName.includes('1604C')) {
+        const type = fileName.includes('1604F') ? '1604-F' : fileName.includes('1604E') ? '1604-E' : '1604-C';
+        const dateStartIndex = tinAndBranchLength;
+        const month = fileName.substring(dateStartIndex, dateStartIndex + 2);
+        const day = fileName.substring(dateStartIndex + 2, dateStartIndex + 4);
+        const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
+        const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleString('default', { month: 'long', year: 'numeric' });
+        const quarter = getQuarter(parseInt(month, 10));
+        return { transactionType: type, reportingPeriod, year, month, tin, quarter };
+    }
+
+    // Sort by length descending to match '2550Q' before '2550'
+    const sawtSchedules = ["1700", "1702", "2550Q", "1701", "1702Q", "2551M", "1701Q", "2550M", "2553"].sort((a, b) => b.length - a.length);
+    const sawtScheduleMatch = sawtSchedules.find(schedule => fileName.includes(schedule));
+
+    if (sawtScheduleMatch) {
+        const monthIndex = tinAndBranchLength;
+        const yearIndex = monthIndex + 2;
+        const month = fileName.substring(monthIndex, yearIndex);
+        const year = fileName.substring(yearIndex, yearIndex + 4);
+        const reportingPeriod = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+        const quarter = getQuarter(parseInt(month, 10));
+        return { transactionType: `SAWT-${sawtScheduleMatch}`, reportingPeriod, year, month, tin, quarter };
+    }
+    
+    // Fallback for unknown types
+    return { transactionType: 'Unknown', reportingPeriod: 'N/A', year: '', month: '', tin: '', quarter: 0 };
+}

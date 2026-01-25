@@ -13,6 +13,7 @@ import { generateSalesExcel, generatePurchasesExcel, generate1601EQExcel, genera
 import { useTaxProfiles } from '@/hooks/use-tax-profiles';
 import { convertDatToTemplate } from '@/lib/actions/excel/dat-to-template';
 import JSZip from 'jszip';
+import { parseFileName } from '@/lib/dat-utils';
 
 interface StagedFile {
     id: string;
@@ -47,58 +48,6 @@ export function DatFileProcessorCard() {
     const [actionStates, setActionStates] = useState<{ [key: string]: boolean }>({});
 
 
-    const parseFileName = useCallback((fileName: string) => {
-        const tinLength = 9;
-        const branchCodeLength = 4;
-        const tinAndBranchLength = tinLength + branchCodeLength;
-        const sawtSchedules = ["1700", "1702", "2550Q", "1701", "1702Q", "2551M", "1701Q", "2550M", "2553"];
-
-        const tin = fileName.substring(0, tinLength);
-
-        const getQuarter = (month: number) => Math.ceil(month / 3);
-
-        if (fileName.includes('1601EQ') || fileName.includes('1601FQ')) {
-            const type = fileName.includes('1601EQ') ? '1601-EQ' : '1601-FQ';
-            const monthIndex = tinAndBranchLength;
-            const yearIndex = monthIndex + 2;
-            const month = fileName.substring(monthIndex, yearIndex);
-            const year = fileName.substring(yearIndex, yearIndex + 4);
-            const quarter = getQuarter(parseInt(month, 10));
-            return { transactionType: type, year, month, tin, quarter };
-        }
-        
-        if (fileName.includes('1604F') || fileName.includes('1604E') || fileName.includes('1604C')) {
-            const type = fileName.includes('1604F') ? '1604-F' : fileName.includes('1604E') ? '1604-E' : '1604-C';
-            const dateStartIndex = tinAndBranchLength;
-            const year = fileName.substring(dateStartIndex + 4, dateStartIndex + 8);
-            return { transactionType: type, year, month: '', tin, quarter: 0 };
-        }
-
-        const sortedSawtSchedules = sawtSchedules.sort((a, b) => b.length - a.length);
-        const sawtScheduleMatch = sortedSawtSchedules.find(schedule => fileName.includes(schedule));
-
-        if (sawtScheduleMatch) {
-            const monthIndex = tinAndBranchLength;
-            const yearIndex = monthIndex + 2;
-            const month = fileName.substring(monthIndex, yearIndex);
-            const year = fileName.substring(yearIndex, yearIndex + 4);
-            return { transactionType: `SAWT-${sawtScheduleMatch}`, year, month, tin, quarter: 0 };
-        }
-        
-        const typeCode = fileName.charAt(9);
-        const month = fileName.substring(10, 12);
-        const year = fileName.substring(12, 16);
-
-        let transactionType = 'Unknown';
-        switch (typeCode) {
-            case 'S': transactionType = 'Sales'; break;
-            case 'P': transactionType = 'Purchases'; break;
-            case 'I': transactionType = 'Importations'; break;
-        }
-
-        return { transactionType, year, month, tin, quarter: 0 };
-    }, []);
-
     const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
@@ -114,7 +63,6 @@ export function DatFileProcessorCard() {
 
     const handleFiles = (files: FileList) => {
         startProcessingTransition(() => {
-            const newFiles: StagedFile[] = [];
             const newFilePromises = Array.from(files).map(file => {
                 if (!file.name.toUpperCase().endsWith('.DAT')) {
                     toast({ title: 'Invalid File Type', description: `Skipping '${file.name}'. Only .DAT files are allowed.`, variant: 'destructive'});
