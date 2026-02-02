@@ -47,3 +47,33 @@ export const ExtractInvoiceDataOutputSchema = z.object({
     fullText: z.string().optional().describe("The full text content of the invoice."),
 });
 export type ExtractInvoiceDataOutput = z.infer<typeof ExtractInvoiceDataOutputSchema>;
+
+
+export const Form2307ItemSchema = z.object({
+  atc: z.string().describe('The Alphanumeric Tax Code (ATC) for the tax line.'),
+  firstMonthIncomePayment: z.string().describe('Income payment for the first month of the quarter.'),
+  secondMonthIncomePayment: z.string().describe('Income payment for the second month of the quarter.'),
+  thirdMonthIncomePayment: z.string().describe('Income payment for the third month of the quarter.'),
+  totalIncomePayment: z.string().describe('Total income payment for the quarter for this tax line.'),
+  taxWithheld: z.string().describe('Total tax withheld for the quarter for this tax line.'),
+});
+
+export const Extract2307DataOutputSchema = z.object({
+  payorTIN: z.string().describe("The Payor's Tax Identification Number (TIN)."),
+  payorName: z.string().describe("The Payor's registered name."),
+  payeeTIN: z.string().describe("The Payee's Tax Identification Number (TIN)."),
+  payeeName: z.string().describe("The Payee's registered name."),
+  periodFrom: z.string().describe("The start of the reporting period (MM/DD/YYYY)."),
+  periodTo: z.string().describe("The end of the reporting period (MM/DD/YYYY)."),
+  taxDetails: z.array(Form2307ItemSchema).describe('A list of tax details, with one entry for each ATC row on the form.'),
+});
+export type Extract2307DataOutput = z.infer<typeof Extract2307DataOutputSchema>;
+
+export const Extract2307DataInputSchema = z.object({
+  formDataUri: z
+    .string()
+    .describe(
+      "An image or PDF of a BIR Form 2307, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+});
+export type Extract2307DataInput = z.infer<typeof Extract2307DataInputSchema>;

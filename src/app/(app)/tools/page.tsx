@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useTransition, useCallback, useEffect, useRef } from 'react';
@@ -8,8 +7,8 @@ import { Input } from '@/components/ui/input';
 import { UploadCloud, File as FileIcon, X, Loader2, Wand2, Scan, Copy, Download, Split, Trash2, StopCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { extractInvoiceData } from '@/lib/actions/ai';
-import type { ExtractInvoiceDataOutput } from '@/ai/schemas';
+import { extractInvoiceData, extract2307Data } from '@/lib/actions/ai';
+import type { ExtractInvoiceDataOutput, Extract2307DataOutput } from '@/ai/schemas';
 import { PDFDocument } from 'pdf-lib';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -18,6 +17,9 @@ import { DatFileProcessorCard } from '@/components/dat-file-processor-card';
 import { Textarea } from '@/components/ui/textarea';
 import { sanitizeAndValidateString } from '@/lib/dat-utils';
 import { useRefresh } from '@/hooks/use-refresh';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Form2307DataTable } from '@/components/form2307-data-table';
 
 function InvoiceUploader({ onFileSelect, clearFile, selectedFile, isAnalyzing }: { onFileSelect: (file: File) => void, clearFile: () => void, selectedFile: File | null, isAnalyzing: boolean }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -395,14 +397,17 @@ function ToolsPageContent() {
     const [isAnalyzing, startAnalyzingTransition] = useTransition();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [analysisResults, setAnalysisResults] = useState<ExtractInvoiceDataOutput[]>([]);
+    const [form2307Results, setForm2307Results] = useState<Extract2307DataOutput[]>([]);
     const [progress, setProgress] = useState(0);
     const [progressText, setProgressText] = useState('');
     const { toast } = useToast();
     const stopGenerationRef = useRef(false);
+    const [scanType, setScanType] = useState<'invoice' | 'form2307'>('invoice');
     
     const handleFileSelect = (file: File) => {
         setSelectedFile(file);
         setAnalysisResults([]);
+        setForm2307Results([]);
         setProgress(0);
         setProgressText('');
     };
@@ -410,6 +415,7 @@ function ToolsPageContent() {
     const handleClearFile = () => {
         setSelectedFile(null);
         setAnalysisResults([]);
+        setForm2307Results([]);
         setProgress(0);
         setProgressText('');
     };
@@ -425,11 +431,12 @@ function ToolsPageContent() {
 
     const handleAnalyze = () => {
         if (!selectedFile) {
-            toast({ title: 'No File Selected', description: 'Please upload an invoice to scan.', variant: 'destructive' });
+            toast({ title: 'No File Selected', description: 'Please upload a document to scan.', variant: 'destructive' });
             return;
         }
 
         setAnalysisResults([]);
+        setForm2307Results([]);
         setProgress(0);
         setProgressText('');
         stopGenerationRef.current = false;
@@ -445,14 +452,23 @@ function ToolsPageContent() {
                 formData.append('pageIndex', String(currentPage - 1));
 
                 try {
-                    const result = await extractInvoiceData(formData);
+                    let result;
+                    if (scanType === 'invoice') {
+                        result = await extractInvoiceData(formData);
+                         if (result.success && result.data) {
+                            setAnalysisResults(prev => [...prev, result.data!]);
+                        }
+                    } else if (scanType === 'form2307') {
+                        result = await extract2307Data(formData);
+                         if (result.success && result.data) {
+                            setForm2307Results(prev => [...prev, result.data!]);
+                        }
+                    }
 
-                    if (result.success && result.data) {
-                        setAnalysisResults(prev => [...prev, result.data!]);
-                    } else {
+                    if (!result || !result.success) {
                         toast({ 
                             title: `Page ${currentPage} Failed`, 
-                            description: result.error || 'An unknown error occurred.', 
+                            description: result?.error || 'An unknown error occurred.', 
                             variant: 'destructive' 
                         });
                     }
@@ -509,7 +525,7 @@ function ToolsPageContent() {
                     if (!stopGenerationRef.current) {
                          toast({
                             title: 'Scan Complete',
-                            description: 'Successfully processed the invoice.'
+                            description: 'Successfully processed the document.'
                         });
                     }
                 }
@@ -533,12 +549,25 @@ function ToolsPageContent() {
                             <Wand2 className="w-6 h-6" />
                         </div>
                         <div>
-                            <CardTitle>AI Invoice Scanner</CardTitle>
-                            <CardDescription>Upload an invoice image or a multi-page PDF to automatically extract key tax information.</CardDescription>
+                            <CardTitle>AI Document Scanner</CardTitle>
+                            <CardDescription>Upload a document to automatically extract key tax information.</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                     <div className="space-y-2">
+                        <Label>Document Type</Label>
+                        <Select value={scanType} onValueChange={(v) => { setScanType(v as any); handleClearFile(); }} disabled={isAnalyzing}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select document type..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="invoice">Invoice</SelectItem>
+                                <SelectItem value="form2307">BIR Form 2307</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     {!isAnalyzing && (
                         <InvoiceUploader 
                             onFileSelect={handleFileSelect}
@@ -551,7 +580,7 @@ function ToolsPageContent() {
                     {selectedFile && !isAnalyzing && (
                          <Button className="w-full" onClick={handleAnalyze} disabled={isAnalyzing}>
                             <Scan className="mr-2 h-4 w-4" />
-                            Scan Invoice
+                            Scan Document
                         </Button>
                     )}
 
@@ -576,9 +605,14 @@ function ToolsPageContent() {
                         </div>
                     )}
                     
-                    {analysisResults.length > 0 && (
+                    {analysisResults.length > 0 && scanType === 'invoice' && (
                         <div className="animate-in fade-in-50 duration-500">
                              <InvoiceDataTable data={analysisResults} isAnalyzing={isAnalyzing} />
+                        </div>
+                    )}
+                     {form2307Results.length > 0 && scanType === 'form2307' && (
+                        <div className="animate-in fade-in-50 duration-500">
+                             <Form2307DataTable data={form2307Results} isAnalyzing={isAnalyzing} />
                         </div>
                     )}
                 </CardContent>
