@@ -209,16 +209,23 @@ export async function generate2316Pdf(formData: FormData): Promise<PdfResult> {
             };
 
             // Validations
-            const rawTin = String(rowData['employeeTIN'] || '').trim();
-            if(!rawTin) validationErrors.push(`${errorPrefix}: employee TIN is required.`);
-            else {
-                const sanitizedTin = rawTin.replace(/[^0-9]/g, '');
-                if (sanitizedTin.length !== 9) validationErrors.push(`${errorPrefix}: employee TIN must be 9 digits.`);
-                rowData['employeeTIN'] = sanitizedTin;
+            const originalTin = String(rowData['employeeTIN'] || '').trim();
+            if (originalTin) {
+                const sanitizedTin = originalTin.replace(/[^0-9]/g, '');
+                if (sanitizedTin.length > 0 && sanitizedTin.length < 9) {
+                    validationErrors.push(`${errorPrefix}: Employee TIN '${originalTin}' is too short. It must be 9 digits.`);
+                }
+                if (sanitizedTin === '000000000') {
+                    validationErrors.push(`${errorPrefix}: Invalid Employee TIN '000000000'.`);
+                }
+                rowData['employeeTIN'] = sanitizedTin.substring(0, 9);
+            } else {
+                rowData['employeeTIN'] = '';
             }
             
             rowData.employeeLastName = sanitizeAndValidateString(rowData.employeeLastName, 'employee lastName', 30, true, errorPrefix).value;
             rowData.employeeFirstName = sanitizeAndValidateString(rowData.employeeFirstName, 'employee firstName', 30, true, errorPrefix).value;
+            rowData.employeeMiddleName = sanitizeAndValidateString(rowData.employeeMiddleName, 'employee middleName', 30, false, errorPrefix).value;
             rowData.employeeAddress = sanitizeAndValidateString(rowData.employeeAddress, 'employee address', 100, false, errorPrefix).value;
             
             const zip = String(rowData['employeeZipCode'] || '');
