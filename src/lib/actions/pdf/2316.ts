@@ -296,38 +296,45 @@ export async function generate2316Pdf(formData: FormData): Promise<PdfResult> {
             pdfTemplateBytes = await templateDoc.save();
         }
 
-        const pdfDocs = await Promise.all(
-            processedRows.map(rowData =>
-                fillPdfForm(
-                    pdfTemplateBytes as Uint8Array,
-                    rowData,
-                    profile,
-                    signatoryName,
-                    pdfSize
-                )
-            )
-        );
+        const masterPdf = await PDFDocument.create();
+        for (const rowData of processedRows) {
+            const tempDoc = await fillPdfForm(
+                pdfTemplateBytes as Uint8Array,
+                rowData,
+                profile,
+                signatoryName,
+                pdfSize
+            );
+            const [copiedPage] = await masterPdf.copyPages(tempDoc, [0]);
+            masterPdf.addPage(copiedPage);
+        }
 
         if (collate === 'multiple') {
             const zip = new JSZip();
-            for (const [index, pdfDoc] of pdfDocs.entries()) {
-                const rowData = processedRows[index];
-                const pdfBytes = await pdfDoc.save();
-                const sanitizedPayeeName = `${rowData.employeeLastName}_${rowData.employeeFirstName}`.replace(/[^a-zA-Z0-9]/g, '_');
-                const pdfFileName = `2316_${rowData.employeeTIN}_${sanitizedPayeeName}_${index + 1}.pdf`;
+            const totalPages = masterPdf.getPageCount();
+
+            for (let i = 0; i < totalPages; i++) {
+                const rowData = processedRows[i];
+
+                const singlePageDoc = await PDFDocument.create();
+                const [copiedPage] = await singlePageDoc.copyPages(masterPdf, [i]);
+                singlePageDoc.addPage(copiedPage);
+                
+                const pdfBytes = await singlePageDoc.save();
+                
+                const sanitizedLastName = rowData.employeeLastName.replace(/[^a-zA-Z0-9]/g, '');
+                const sanitizedFirstName = rowData.employeeFirstName.replace(/[^a-zA-Z0-9]/g, '');
+                const pdfFileName = `${i + 1}. ${rowData.employeeTIN}_${sanitizedLastName}_${sanitizedFirstName}.pdf`;
+
                 zip.file(pdfFileName, pdfBytes);
             }
+            
             const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
             const base64 = zipBuffer.toString('base64');
             const fileName = `Generated_Certificates_2316_${Date.now()}.zip`;
             return { success: true, base64, fileName };
         } else {
-            const mergedPdf = await PDFDocument.create();
-            for (const pdfDoc of pdfDocs) {
-                const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                pages.forEach(page => mergedPdf.addPage(page));
-            }
-            const pdfBytes = await mergedPdf.save();
+            const pdfBytes = await masterPdf.save();
             const base64 = Buffer.from(pdfBytes).toString('base64');
             const fileName = `Generated_Certificates_2316_${Date.now()}.pdf`;
             return { success: true, base64, fileName };
@@ -339,3 +346,5 @@ export async function generate2316Pdf(formData: FormData): Promise<PdfResult> {
         return { success: false, error: errorMessage };
     }
 }
+
+    
