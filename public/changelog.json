@@ -1,0 +1,10 @@
+{
+  "version": "1.3.0",
+  "date": "February 13, 2026",
+  "title": "New Features & Scanner Upgrades!",
+  "changes": [
+    "Added a scanner for BIR Form 2307 to the 'AI Document Scanner' tool.",
+    "Added a scaling option for signatures (1-100%) in PDF certificate generation for finer control.",
+    "The AI Document Scanner UI has been generalized to support multiple document types."
+  ]
+}

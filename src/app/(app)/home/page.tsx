@@ -9,6 +9,14 @@ import { useRefresh } from '@/hooks/use-refresh';
 import { useTaxProfiles } from '@/hooks/use-tax-profiles';
 import { ProfileForm } from '@/components/profile-form';
 import { useDatFiles } from '@/hooks/use-dat-files';
+import { ChangelogDialog } from '@/components/changelog-dialog';
+
+interface ChangelogData {
+  version: string;
+  date: string;
+  title: string;
+  changes: string[];
+}
 
 export default function HomePage() {
   const { toast } = useToast();
@@ -26,8 +34,33 @@ export default function HomePage() {
   const { setRefreshFunction } = useRefresh();
   const [isFormOpen, setIsFormOpen] = useState(false);
   
+  // State for Changelog
+  const [changelogData, setChangelogData] = useState<ChangelogData | null>(null);
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+
   const wasPending = useRef(false);
   const isManualRefresh = useRef(false);
+
+  // Changelog logic
+  useEffect(() => {
+    fetch('/changelog.json')
+      .then(response => response.json())
+      .then((data: ChangelogData) => {
+        const lastHiddenVersion = localStorage.getItem('lastHiddenChangelogVersion');
+        if (data.version !== lastHiddenVersion) {
+          setChangelogData(data);
+          setIsChangelogOpen(true);
+        }
+      })
+      .catch(error => console.error("Failed to fetch changelog:", error));
+  }, []);
+
+  const handleChangelogClose = (hideUntilNextUpdate: boolean) => {
+    setIsChangelogOpen(false);
+    if (hideUntilNextUpdate && changelogData) {
+      localStorage.setItem('lastHiddenChangelogVersion', changelogData.version);
+    }
+  };
 
   useEffect(() => {
     const isCurrentlyPending = isPending || isDatFilesPending;
@@ -79,6 +112,16 @@ export default function HomePage() {
         profile={null}
         onSuccess={handleProfileSuccess}
       />
+      {changelogData && (
+        <ChangelogDialog 
+          isOpen={isChangelogOpen}
+          onClose={handleChangelogClose}
+          version={changelogData.version}
+          date={changelogData.date}
+          title={changelogData.title}
+          changes={changelogData.changes}
+        />
+      )}
     </>
   );
 }
