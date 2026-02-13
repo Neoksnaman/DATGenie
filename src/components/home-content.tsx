@@ -749,7 +749,7 @@ export function HomeContent({
   }
 
   const handleCertGeneration = async (file: File, args: any): Promise<boolean> => {
-    const { certificateType, signatoryName, signatoryTIN, signatoryPosition, signatureFile, pdfSize, collate, signatureX, signatureY } = args;
+    const { certificateType, signatoryName, signatoryTIN, signatoryPosition, signatureFile, pdfSize, collate, signatureX, signatureY, signatureScale } = args;
 
     if (!selectedProfile) {
         toast({ title: 'No Profile Selected', description: 'Please select a tax profile before generating a certificate.', variant: 'destructive'});
@@ -775,6 +775,7 @@ export function HomeContent({
     formData.append('collate', collate);
     formData.append('signatureX', String(signatureX));
     formData.append('signatureY', String(signatureY));
+    formData.append('signatureScale', String(signatureScale));
 
 
     const result = await generatePdf(formData);
@@ -1057,4 +1058,3 @@ export function HomeContent({
     </>
   );
 }
-

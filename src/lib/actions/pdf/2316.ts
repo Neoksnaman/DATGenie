@@ -144,6 +144,7 @@ export async function generate2316Pdf(formData: FormData): Promise<PdfResult> {
     const collate = formData.get('collate') as 'single' | 'multiple' || 'single';
     const signatureX = parseInt(formData.get('signatureX') as string, 10) || 150;
     const signatureY = parseInt(formData.get('signatureY') as string, 10) || 160;
+    const signatureScale = parseInt(formData.get('signatureScale') as string, 10) || 100;
 
     if (!file) return { success: false, error: 'No Excel file uploaded.' };
     if (!profileString) return { success: false, error: 'Tax profile not provided.' };
@@ -281,7 +282,11 @@ export async function generate2316Pdf(formData: FormData): Promise<PdfResult> {
                 embeddedSignature = await templateDoc.embedJpg(signatureBuffer);
             }
             const page = templateDoc.getPage(0);
-            const dims = embeddedSignature.scaleToFit(150, 35);
+            
+            const scaleFactor = signatureScale / 100;
+            const maxWidth = 150 * scaleFactor;
+            const maxHeight = 35 * scaleFactor;
+            const dims = embeddedSignature.scaleToFit(maxWidth, maxHeight);
             
             // First signature
             const y_pos1 = signatureY + (35 - dims.height) / 2;
@@ -346,5 +351,3 @@ export async function generate2316Pdf(formData: FormData): Promise<PdfResult> {
         return { success: false, error: errorMessage };
     }
 }
-
-    

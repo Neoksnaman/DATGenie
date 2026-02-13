@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Input } from './ui/input';
 import { Progress } from './ui/progress';
+import { Slider } from './ui/slider';
 
 interface GenerationCardProps {
   title: string;
@@ -104,6 +105,7 @@ export function GenerationCard({
   const [collate, setCollate] = useState<'single' | 'multiple'>('single');
   const [signatureX, setSignatureX] = useState(150);
   const [signatureY, setSignatureY] = useState(185);
+  const [signatureScale, setSignatureScale] = useState(100);
 
   const handleFileSelect = (file: File | null) => {
     setSelectedFile(file);
@@ -255,7 +257,7 @@ export function GenerationCard({
         if (isDatGeneration) {
             args = { month, year, reportType, sawtSchedule };
         } else {
-            args = { certificateType, signatoryName, signatoryTIN, signatoryPosition, signatureFile, pdfSize, collate, signatureX, signatureY };
+            args = { certificateType, signatoryName, signatoryTIN, signatoryPosition, signatureFile, pdfSize, collate, signatureX, signatureY, signatureScale };
         }
         const success = await onGenerate(selectedFile, args);
 
@@ -573,6 +575,19 @@ export function GenerationCard({
                                 </div>
                             </div>
                         </div>
+                        <div className="space-y-2">
+                             <div className="flex justify-between items-center">
+                                <Label className="text-xs">Signature Scale</Label>
+                                <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded-md">{signatureScale}%</span>
+                            </div>
+                            <Slider
+                                value={[signatureScale]}
+                                onValueChange={(value) => setSignatureScale(value[0])}
+                                min={1}
+                                max={100}
+                                step={1}
+                            />
+                        </div>
                     </div>
                 </AccordionContent>
                 </AccordionItem>
@@ -582,7 +597,3 @@ export function GenerationCard({
     </Card>
   );
 }
-
-    
-
-    
