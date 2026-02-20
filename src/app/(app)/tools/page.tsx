@@ -397,7 +397,7 @@ function ToolsPageContent() {
     const [isAnalyzing, startAnalyzingTransition] = useTransition();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [analysisResults, setAnalysisResults] = useState<ExtractInvoiceDataOutput[]>([]);
-    const [form2307Results, setForm2307Results] = useState<Extract2307DataOutput[]>([]);
+    const [form2307Results, setForm2307Results] = useState<(Extract2307DataOutput & { pageNumber: number; error?: string; })[]>([]);
     const [progress, setProgress] = useState(0);
     const [progressText, setProgressText] = useState('');
     const { toast } = useToast();
@@ -452,31 +452,51 @@ function ToolsPageContent() {
                 formData.append('pageIndex', String(currentPage - 1));
 
                 try {
-                    let result;
                     if (scanType === 'invoice') {
-                        result = await extractInvoiceData(formData);
+                        const result = await extractInvoiceData(formData);
                          if (result.success && result.data) {
                             setAnalysisResults(prev => [...prev, result.data!]);
+                        } else {
+                             toast({ 
+                                title: `Page ${currentPage} Failed`, 
+                                description: result.error || 'An unknown error occurred.', 
+                                variant: 'destructive' 
+                            });
                         }
                     } else if (scanType === 'form2307') {
-                        result = await extract2307Data(formData);
+                        const result = await extract2307Data(formData);
                          if (result.success && result.data) {
-                            setForm2307Results(prev => [...prev, result.data!]);
+                            setForm2307Results(prev => [...prev, { ...result.data!, pageNumber: currentPage }]);
+                        } else {
+                            const skippedPage: any = {
+                                pageNumber: currentPage,
+                                payeeName: `Page ${currentPage} Skipped`,
+                                error: result.error || 'An unknown error occurred.',
+                                taxDetails: [],
+                            };
+                            setForm2307Results(prev => [...prev, skippedPage]);
+                             toast({ 
+                                title: `Page ${currentPage} Skipped`, 
+                                description: result.error || 'An unknown error occurred.', 
+                                variant: 'destructive' 
+                            });
                         }
-                    }
-
-                    if (!result || !result.success) {
-                        toast({ 
-                            title: `Page ${currentPage} Failed`, 
-                            description: result?.error || 'An unknown error occurred.', 
-                            variant: 'destructive' 
-                        });
                     }
                 } catch (error) {
                     console.error(error);
+                    const errorMessage = `An unexpected error occurred on page ${currentPage}.`;
+                     if(scanType === 'form2307') {
+                        const skippedPage: any = {
+                            pageNumber: currentPage,
+                            payeeName: `Page ${currentPage} Skipped`,
+                            error: errorMessage,
+                            taxDetails: [],
+                        };
+                        setForm2307Results(prev => [...prev, skippedPage]);
+                    }
                     toast({
                         title: 'Scan Failed',
-                        description: `An unexpected error occurred on page ${currentPage}.`,
+                        description: errorMessage,
                         variant: 'destructive'
                     });
                 }

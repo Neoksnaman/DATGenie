@@ -96,6 +96,20 @@ const Extract2307ResultSchema = z.object({
 });
 type Extract2307Result = z.infer<typeof Extract2307ResultSchema>;
 
+const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error('Page processing timed out after 1 minute.'));
+    }, ms);
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => clearTimeout(timeout));
+  });
+};
+
+
 export async function extract2307Data(
   formData: FormData
 ): Promise<Extract2307Result> {
@@ -115,7 +129,10 @@ export async function extract2307Data(
     const buffer = Buffer.from(bytes);
     const dataUri = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-    const rawExtractedData = await extract2307DataFlow({ formDataUri: dataUri }, pageIndex);
+    const rawExtractedData = await withTimeout(
+      extract2307DataFlow({ formDataUri: dataUri }, pageIndex),
+      60000 // 1 minute timeout
+    );
 
     if (!rawExtractedData) {
       return { success: false, data: null, error: 'AI failed to extract any data from the form.' };

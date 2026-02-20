@@ -66,6 +66,7 @@ export const Extract2307DataOutputSchema = z.object({
   periodFrom: z.string().describe("The start of the reporting period (MM/DD/YYYY)."),
   periodTo: z.string().describe("The end of the reporting period (MM/DD/YYYY)."),
   taxDetails: z.array(Form2307ItemSchema).describe('A list of tax details, with one entry for each ATC row on the form.'),
+  pageNumber: z.number().optional().describe('The page number of the document.'),
 });
 export type Extract2307DataOutput = z.infer<typeof Extract2307DataOutputSchema>;
 
