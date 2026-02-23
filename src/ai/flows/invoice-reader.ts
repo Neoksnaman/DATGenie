@@ -69,13 +69,9 @@ export async function extractInvoiceData(
   }
 
   // This loop attempts to try the next key if the current one is invalid.
-  for (let keyAttempt = 0; keyAttempt < activeKeys.length; keyAttempt++) {
-    // 2. Determine the starting key for this page using round-robin on the *active* keys.
-    const keyIndex = (pageIndex + keyAttempt) % activeKeys.length;
-    const apiKey = activeKeys[keyIndex];
+  for (const [keyIndex, apiKey] of activeKeys.entries()) {
     const maskedKey = apiKey.slice(0, 8) + '...';
-
-    let allModelsExhaustedForKey = true;
+    let allModelsFailedForKey = true;
 
     // 3. Loop through all models for the selected key.
     for (const model of GEMINI_MODELS) {
@@ -147,7 +143,7 @@ export async function extractInvoiceData(
         }
 
         // If it's not a quota error, we assume the key is still valid for other models.
-        allModelsExhaustedForKey = false;
+        allModelsFailedForKey = false;
 
         // If the key is invalid, break the inner model loop to try the next key.
         if (isInvalidKeyError) {
@@ -162,7 +158,7 @@ export async function extractInvoiceData(
       }
     }
 
-    if (allModelsExhaustedForKey) {
+    if (allModelsFailedForKey) {
         logToBrowser(`[Background] Marking key ${maskedKey} as exhausted because all models failed.`);
         markApiKeyAsExhausted(apiKey).catch(console.error);
     }
