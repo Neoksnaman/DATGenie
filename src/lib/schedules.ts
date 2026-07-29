@@ -110,6 +110,12 @@ export const atcWE: AtcScheduleItem[] = [
     { atc: 'WC790', rate: 15, description: 'On the share of each co-venturer/member from the net income of the joint venture/consortium not taxable as corporation prior to actual or constructive distribution thereof' },
     { atc: 'WC820', rate: 0.5, description: 'On the gross remittances by e-marketplace operators to the sellers/merchants for the goods or services sold/paid through their platform/facility' },
     { atc: 'WC830', rate: 0.5, description: 'On the gross remittances by digital financial services providers to the sellers/merchants for the goods or services sold/paid through their platform/facility' },
+	{ atc: 'WI840', rate: 0.5, description: 'Income payments made by top withholding agents, individuals, to the manufacturers and direct importers of motor vehicles in Completely Built Units (CBUs) or Semi-Knockdown (SKD) units, motor vehicle parts and accessories' },
+	{ atc: 'WC840', rate: 0.5, description: 'Income payments made by top withholding agents, corporations, to the manufacturers and direct importers of motor vehicles in Completely Built Units (CBUs) or Semi-Knockdown (SKD) units, motor vehicle parts and accessories' },
+	{ atc: 'WI850', rate: 0.5, description: 'Income payments made by top withholding agents, individuals, to the manufacturers and direct importers of medicine/pharmaceutical products' },
+	{ atc: 'WC850', rate: 0.5, description: 'Income payments made by top withholding agents, corporations, to the manufacturers and direct importers of medicine/pharmaceutical products' },
+	{ atc: 'WI860', rate: 0.5, description: 'Income payments made by top withholding agents, individuals, to the manufacturers and direct importers of solid or liquid fuels and related products' },
+	{ atc: 'WC860', rate: 0.5, description: 'Income payments made by top withholding agents, corporations, to the manufacturers and direct importers of solid or liquid fuels and related products' },
 ];
 
 export const atcExempt: AtcScheduleItem[] = [

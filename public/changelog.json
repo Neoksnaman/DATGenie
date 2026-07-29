@@ -1,11 +1,9 @@
 {
-  "version": "1.3.1",
-  "date": "April 15, 2026",
-  "title": "A Big Thank You to Our Auditors! 🙌",
+  "version": "1.3.2",
+  "date": "July 29, 2026",
+  "title": "Tax Code List Updates",
   "changes": [
-    "As we reach the April 15 tax deadline, we would like to extend our heartfelt thanks to all auditors.",
-    "Your dedication, long hours, and attention to detail do not go unnoticed.",
-    "Because of your hard work, we are able to meet deadlines with confidence and accuracy.",
-    "We truly appreciate your commitment—thank you for your excellent work!"
+    "Added RDO Code 21C to the Create Tax Profile dropdown.",
+    "Added six new 0.5% ATCs for top withholding agent payments: WI840, WC840, WI850, WC850, WI860, and WC860."
   ]
 }
